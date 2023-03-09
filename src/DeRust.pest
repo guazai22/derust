@@ -1,0 +1,91 @@
+file = {
+      SOI
+    ~ ( def_fn
+      /* | comment */
+      | NEWLINE
+    // TODO: 其他模块
+      )*
+    ~ EOI
+}
+
+def_fn = {
+      keyword_def_fn_start ~ dot
+    ~ def_fn_head
+    ~ def_fn_body
+}
+
+keyword_def_fn_start = _{ "fn" }
+
+// 函数名:
+// 1. 函数尾部必须有圆括号, 可以包含 0 个或者多个参数.
+// 2. 函数被圆括号和空格分割的部分, 叫作函数定义标识符, 可以是 下划线 字母 数字 的任意组合,
+// 但不能是纯下划线, 第一个函数定义标识符不能以数字或者下划线+数字开头.
+//     合法: first add (x) then add (y)
+//     不合法: 11 times (n)
+//     合法: add 11 times (n)
+//     不合法: 11 (apples)
+//     不合法: _11 (apples) 12 (bananas)
+//     合法: time (apples amount) with 8 ()
+//     合法: _time (apples amount) 8 ()
+//     不合法: __ time (apples amount) 8 ()
+//     不合法: _ time (apples amount) 8 ()
+//     不合法: _ time (apples amount) _ ()
+// 3. 如果函数只有一对圆括号, 函数的字符部分不能和关键字一样.
+//    不合法: for ()
+//    不合法: loop for ()
+//    不合法: loop if ()
+// TODO: 符号重载
+
+def_fn_head = {
+      ( identifier
+      ~ "("
+      ~ ( variable_def_head   // 函数参数
+        ~ ","?
+        )*
+      ~ ")"
+      )
+    ~ ( identifier_atomic+
+      ~ "("
+      ~ ( variable_def_head   // 函数参数
+        ~ ","?
+        )*
+      ~ ")"
+      )*
+    ~ NEWLINE*
+    ~ def_fn_head_result?
+}
+
+def_fn_body = {
+      "{"
+    ~ statement*
+    ~ expression?
+    ~ "}"
+}
+
+def_fn_head_result = {
+      "->"
+    ~ identifier
+}
+
+variable_def_head = {
+      identifier
+    ~ ":"
+    ~ identifier
+}
+
+// 变量不能以数字或者下划线+数字开头
+identifier = ${ !("_"* ~ NUMBER) ~ (identifier_atomic ~ " "*)+ }
+
+// TODO: 这个 rule 运行的时候并不如设想的那样是 silent, 可能有bug
+identifier_atomic = @{ ("_"* ~ (LETTER | NUMBER)+ ~ "_"*)+ }
+
+dot = _{ "." }
+
+// 本语言对 空格 换行 tab符 不敏感.
+// 也就是说理论上任何两个非原子语法之间,
+// 都可以插入上述三种符号的任意组合而不改变语法的含义.
+// 但是鉴于可能会有非原本含义的误解析,
+// 比如会出现如果忘记打分号, 会把两行解析到一块的"误解".
+// 在有 换行, tab, 三个及三个以上空格 的情况下, 解析器不会自动去"修改优化"代码,
+// 而是会要求手动修改.
+WHITESPACE   =  _{ " " | "\t" | NEWLINE }
