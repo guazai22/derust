@@ -1,0 +1,7 @@
+fn mai(n: i32, n: i, m: i32) -> i32 {
+    println!("abc");
+    "abc"
+}
+fn main() {
+    println!("abc");
+}

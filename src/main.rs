@@ -5,94 +5,181 @@ extern crate pest_derive;
 use pest::iterators::Pair;
 use pest::Parser;
 use std::fs;
+use std::process::Command;
 
 #[derive(Parser)]
 #[grammar = "DeRust.pest"]
 pub struct DeRustParser;
 
-fn main() {
-    let input = fs::read_to_string("./test/def_fn/def_fn.drs").expect("cannot read file");
+fn main() -> std::io::Result<()> {
+    let rule_name = "0002_function_call_statement";
 
-    let pairs = DeRustParser::parse(Rule::file, &input)
-        .unwrap()
-        .next()
-        .unwrap()
-        .into_inner();
+    let input = fs::read_to_string(&(String::from("./test/") + rule_name + ".drs")).expect("cannot read file");
+    let pair = DeRustParser::parse(Rule::file, &input).unwrap().next().unwrap();
+    println!("{:#?}", pair.clone()); //test
+    let s: String = output(pair);
 
-    println!("{:#?}", pairs);
+    let rust_file_path = String::from("./test/") + rule_name + ".drs.rs";
+    fs::write(&rust_file_path, &s)?;
+    Command::new("rustfmt").arg(&rust_file_path).status().expect("");
+    println!("\nrust file:");
+    Command::new("cat").arg(&rust_file_path).status().expect("");
 
-    let mut output: String = String::new();
-    for pair in pairs {
-        match pair.as_rule() {
-            | Rule::def_fn => {
-                output = output + &output_def_fn(pair);
-            },
-            | _ => {},
-        }
-    }
-
-    println!("{:#?}", output);
+    println!("\n    {}.drs   pasering done.", rule_name);
+    println!("the following file is not as the same as previous");
+    // test_pre(rule_name)
+    Ok(())
 }
 
-fn output_def_fn(pair: Pair<Rule>) -> String {
-    let mut inner_rules = pair.into_inner();
-    let pair_head = inner_rules.next().unwrap();
-    let pair_body = inner_rules.next().unwrap();
+fn test_pre(present: &str) -> std::io::Result<()> {
+    let mut i: i32 = 1;
+    for entry in fs::read_dir("./test")? {
+        let file = entry.unwrap().path();
+        let file = file.to_str().unwrap();
+        if file.ends_with(".drs") && !file.ends_with(&(String::from(present) + ".drs")) {
+            let drs_content = fs::read_to_string(file).expect("err when read {file}");
+            let pair = DeRustParser::parse(Rule::file, &drs_content).unwrap().next().unwrap();
+            let s: String = output(pair);
 
-    let mut identifier = String::new();
-    let mut result = String::new();
-    let mut parameters = String::new();
-    parameters.push_str("(");
+            let temp_file = String::from("./test/temp/") + &(i.to_string());
 
-    for subpair in pair_head.into_inner() {
-        // println!("{:#?}", subpair.as_rule());
-        match subpair.as_rule() {
-            | Rule::identifier => {
-                identifier.push_str(&output_identifier(subpair));
-            },
-            | Rule::identifier_atomic => {
-                identifier.push_str("_");
-                identifier.push_str(subpair.as_str());
-            },
-            | Rule::def_fn_head_result => {
-                result.push_str(" ");
-                result.push_str(subpair.as_str());
-            },
-            | Rule::variable_def_head => {
-                parameters.push_str(subpair.as_str());
-                parameters.push_str(", ");
-            },
-            | _ => {},
+            fs::write(&temp_file, &s)?;
+            Command::new("rustfmt").arg(&temp_file).status().expect("");
+
+            let rs_content = fs::read_to_string(String::from(file) + ".rs").expect("err when read {file}");
+            let now_content = fs::read_to_string(String::from(temp_file)).expect("err when read {temp_file}");
+
+            if rs_content != now_content {
+                let (_, temp_s) = file.split_at(7);
+                println!("    {temp_s}.rs");
+                let now_rust_file_path = String::from(file) + ".rs.now";
+                fs::write(&now_rust_file_path, &now_content)?;
+            }
+            i = i + 1;
         }
     }
-
-    parameters.push_str(")");
-
-    let mut output: String = String::new();
-    output.push_str("fn ");
-    output.push_str(&identifier);
-    output.push_str(&parameters);
-    output.push_str(&result);
-    output.push_str(&output_body(pair_body));
-
-    return output;
+    Ok(())
 }
 
-fn output_identifier(pair: Pair<Rule>) -> String {
-    let mut output = String::new();
-    for subpair in pair.into_inner() {
-        match subpair.as_rule() {
-            | Rule::identifier_atomic => {
-                output.push_str(subpair.as_str());
-                output.push_str("_");
-            },
-            | _ => {},
-        }
+fn output(pair: Pair<Rule>) -> String {
+    let rule = pair.as_rule();
+    let mut s = String::new();
+    match rule {
+        Rule::file => {
+            for subpair in pair.into_inner() {
+                s.push_str(&output(subpair));
+            }
+            return s;
+        },
+        Rule::function_call_statement => {
+            let mut identifier = String::new();
+            let mut parameters = String::new();
+            for subpair in pair.into_inner() {
+                match subpair.as_rule() {
+                    Rule::identifier | Rule::identifier_atomic => {
+                        identifier.push_str(&output(subpair));
+                        identifier.push_str("_");
+                    },
+                    Rule::expression => {
+                        parameters.push_str(subpair.as_str());
+                        parameters.push_str(", ");
+                    },
+                    _ => {},
+                }
+            }
+            identifier.pop();
+            s.push_str(&identifier);
+            s.push_str("(");
+            s.push_str(&parameters);
+            s.push_str(");");
+            return s;
+        },
+        Rule::number_literal => {
+            return pair.as_str().replace(" ", "_");
+        },
+        Rule::identifier => {
+            return pair.as_str().replace(" ", "_");
+        },
+        Rule::def_fn => {
+            let mut inner_rules = pair.into_inner();
+            s.push_str("fn ");
+            s.push_str(&output(inner_rules.next().unwrap()));
+            s.push_str(&output(inner_rules.next().unwrap()));
+            return s;
+        },
+
+        Rule::def_fn_head => {
+            let mut identifier = String::new();
+            let mut result = String::new();
+            let mut parameters = String::new();
+            for subpair in pair.into_inner() {
+                match subpair.as_rule() {
+                    Rule::identifier | Rule::identifier_atomic => {
+                        identifier.push_str(&output(subpair));
+                        identifier.push_str("_");
+                    },
+                    Rule::type_expr => {
+                        parameters.push_str(subpair.as_str());
+                        parameters.push_str(", ");
+                    },
+                    Rule::def_fn_head_result => {
+                        result.push_str(" ");
+                        result.push_str(subpair.as_str());
+                    },
+                    _ => {},
+                }
+            }
+            identifier.pop();
+            s.push_str(&identifier);
+            s.push_str("(");
+            s.push_str(&parameters);
+            s.push_str(")");
+            s.push_str(&result);
+            return s;
+        },
+        Rule::def_fn_body => {
+            s.push_str("{");
+            for subpair in pair.into_inner() {
+                s.push_str(&output(subpair));
+            }
+            s.push_str("}");
+            return s;
+        },
+        Rule::tuple_expr => {
+            s.push_str("(");
+            for subpair in pair.into_inner() {
+                s.push_str(&output(subpair));
+                s.push_str(",");
+            }
+            s.push_str(")");
+            return s;
+        },
+        Rule::string_literal => {
+            return output(pair.into_inner().next().unwrap());
+        },
+        Rule::triple_quote_string => {
+            s.push_str("\"");
+            s.push_str(&output(pair.into_inner().next().unwrap()));
+            s.pop();
+            s.push_str("\"");
+            return s;
+        },
+        // enmu类规则 直接跳到 子规则
+        Rule::expression | Rule::statement | Rule::expr_literal => {
+            return output(pair.into_inner().next().unwrap());
+        },
+        // 直接返回原值的规则
+        Rule::quote_string
+        | Rule::raw_string
+        | Rule::inner_string
+        | Rule::bool_literal
+        | Rule::identifier_atomic
+        | Rule::EOI => {
+            return String::from(pair.as_str());
+        },
+        _ => {
+            println!("skip rule: {:?}\n{:?}", rule, pair.as_str());
+            return String::from(pair.as_str());
+        },
     }
-    output.pop();
-    return output;
-}
-
-fn output_body(pair: Pair<Rule>) -> String {
-    return String::from("{}");
 }

@@ -1,0 +1,20 @@
+// function_call_statement
+fn. abc(n: i32) ab() -> i32 {
+    123
+}
+
+fn. abc de() -> i32 {
+    123
+}
+
+fn. abc de() -> i32 {
+    123
+}
+
+fn. bb aa(n: i32 , m: i32) cc dd(i: i32) -> i32 {
+    add(323) add(223);
+}
+
+fn. bb aa(n: i32 , m: i32) cc dd(i: i32) ee () -> i32 {
+    add(323) add(223);
+}
