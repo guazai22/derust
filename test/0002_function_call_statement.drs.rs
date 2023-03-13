@@ -1,9 +1,7 @@
 fn abc_ab(n: i32) -> i32 {
-    123
+    123;
 }
-fn abc_de() -> i32 {
-    123
-}
+fn abcde() {}
 fn abc_de() -> i32 {
     123
 }

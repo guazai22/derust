@@ -1,0 +1,23 @@
+fn abc() {}
+fn abc(m: n) {}
+fn abc_de() {}
+fn abc_de(m: n) {}
+fn abc_de(m: n) {}
+fn abc_de(m: n) {}
+fn abc_de(m: n, m: n) {}
+fn ab_cd_e_fg(m: n) {}
+fn ab_cd_e_fg(m: n) {}
+fn ab_cd_e_fg(m: n, m: n) {}
+fn ab_cd_e_fg_hij(m: n) {}
+fn ab_cd_e_fg_hij(m: n) {}
+fn ab_cd_e_fg_hij(m: n, m: n) {}
+fn ab_cd_e_fg_hij_kml(m: n, m: n, m: n) {}
+fn ab_cd_e_fg_hij_kml(m: n, m: n, m: n) {
+    abc();
+}
+fn bb_aa_cc_dd(n: i32, m: i32, i: i32) -> i32 {
+    add_add(323, 223);
+}
+fn bb_aa_cc_dd_ee(n: i32, m: i32, i: i32) -> i32 {
+    add_add(323, 223);
+}

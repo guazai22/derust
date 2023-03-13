@@ -17,5 +17,6 @@ in pkgs.mkShell {
   shellHook = ''
     echo hello, nix-shell_of_rust!
   '';
-  CARGO_TARGET_DIR = "/mnt/A/Rust_target/";
+  # CARGO_TARGET_DIR = "/mnt/A/Rust_target/";
+  CARGO_TARGET_DIR = "/home/gz/Rust_target_Developing/";
 }

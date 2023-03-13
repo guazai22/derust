@@ -3,9 +3,7 @@ fn. abc(n: i32) ab() -> i32 {
     123
 }
 
-fn. abc de() -> i32 {
-    123
-}
+fn. abcde() {}
 
 fn. abc de() -> i32 {
     123

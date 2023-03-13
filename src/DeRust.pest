@@ -7,97 +7,53 @@ file = {
     ~ EOI
 }
 
-def_fn = {
-      keyword_def_fn_start ~ DOT
-    ~ def_fn_head
-    ~ def_fn_body
-}
-
-keyword_def_fn_start = _{ "fn" }
-
-// 函数名:
-// 1. 函数尾部必须有圆括号, 可以包含 0 个或者多个参数.
-// 2. 函数被圆括号和空格分割的部分, 叫作函数定义标识符, 可以是 下划线 字母 数字 的任意组合,
-// 但不能是纯下划线, 第一个函数定义标识符不能以数字或者下划线+数字开头.
-//     合法: first add (x) then add (y)
-//     不合法: 11 times (n)
-//     合法: add 11 times (n)
-//     不合法: 11 (apples)
-//     不合法: _11 (apples) 12 (bananas)
-//     合法: time (apples amount) with 8 ()
-//     合法: _time (apples amount) 8 ()
-//     不合法: __ time (apples amount) 8 ()
-//     不合法: _ time (apples amount) 8 ()
-//     不合法: _ time (apples amount) _ ()
-// 3. 如果函数只有一对圆括号, 函数的字符部分不能和关键字一样.
-//    不合法: for ()
-//    不合法: loop for ()
-//    不合法: loop if ()
-// TODO: 符号重载
-
 def_fn_head = {
-      ( identifier
-      ~ ( "("
-        ~ ( type_expr
-          ~ ( "," ~ type_expr )* ~ ","?
-          )
-        ~ ")" ~ identifier_atomic +
-        ) *
-      ~ ( "("
-        ~ ( type_expr
-          ~ ( "," ~ type_expr )* ~ ","?
-          )?
+      ( ( identifier
+          ~ ( "(" ~ ( type_expr ~ ( "," ~ type_expr )* ~ ","? )
+            ~ ")" ~ identifier_atomic +
+            )+
+          ~ ( "(" ~ ( type_expr ~ ( "," ~ type_expr )* ~ ","? 
+                    )?
+            ~ ")"
+            )?
+        )
+      | ( identifier
+        ~ "(" ~ ( type_expr ~ ( "," ~ type_expr )* ~ ","?
+                )?
         ~ ")"
-        )
-      )
-    ~ def_fn_head_result?
+      ) )
+    ~ ( "->" ~ type_name )?
 }
 
-def_fn_body = {
-      "{"
-    ~ statement*
-    ~ expression?
-    ~ "}"
-}
-
-statement = {
-    function_call_statement
-}
-
-// TODO: 对于 ab(c)d() 这种函数要不要优化成 ab(c)d 这样, 还要再考虑一下.
-function_call_statement = {
-      identifier
-    ~ ( "("
-      ~ ( expression
-        ~ ( "," ~ expression )* ~ ","?
-        )
-      ~ ")" ~ identifier_atomic +
-      ) *
-    ~ ( "("
-      ~ ( expression
-        ~ ( "," ~ expression )* ~ ","?
+function_call_expr = {
+      ( identifier
+      ~ ( "(" ~ ( expression ~ ( "," ~ expression )* ~ ","?
+                )?
+        ~ ")" ~ identifier_atomic +
+        )+
+      ~ ( "(" ~ ( expression ~ ( "," ~ expression )* ~ ","?
+                )?
+        ~ ")"
         )?
+      )
+    | ( identifier
+      ~ "(" ~ ( expression ~ ( "," ~ expression )* ~ ","?
+              )?
       ~ ")"
       )
-    ~ ";"
 }
 
-function_call_expr = { identifier ~ "(" ~ expression ~ ")" }
-/* function_call_expr = { identifier ~ "(" ~ expression ~ ("," ~ expression)* ~ ","? ~ ")" } */
-
-type_expr = { identifier ~ ":" ~ identifier }
-
-expression = {
-      identifier   // 变量
-    | expr_literal // 字面值
-    | tuple_expr
+// enum
+statement = { function_call_statement
+    /* | let_statement */
+    // TODO
+}
+expression = { function_call_expr | type_expr | expr_literal | tuple_expr | identifier
     /* | array_expr                         */
-    | function_call_expr
     /* | method_call_expr                   */
     /* | binary_expr                        */
     /* | unary_expr // 一元操作         */
     /* | cast_expr  // foo as f64           */
-    | type_expr
     /* | let_expr                           */
     /* | if_expr                            */
     /* | loop_expr  // TODO: while for loop */
@@ -126,87 +82,50 @@ expression = {
     /* | includedbytes // ?                 */
     /* | formatargs // format_args!()       */
     /* | Err_expr                           */
+    // TODO
 }
-
-expr_literal = {
-     bool_literal
-    | number_literal
-    | string_literal
+type_name = { identifier
+    /* /* | */ // TODO 其他enum: (<i32>,<i32>) [<i32>]  */
+    // TODO: type tuple_type or_type ...
 }
+expr_literal   = { bool_literal | number_literal | string_literal }
+string_literal = { triple_quote_string | quote_string | raw_string }
 
-tuple_expr = { "(" ~ expression ~ ("," ~ expression)* ~ ","? ~")" }
-
+// 紧凑型 raw string, 可直接返回原值的规则
 bool_literal = { "true" | "false" }
-
-/* string_literal = { "\"" ~ identifier ~ "\"" }   // TODO: 不能只是字母和数字 */
-
-// string 有两种表达方式:
-// 1. 一对双引号之间的字符.
-// 2. 一对 三个双引号 之间的字符.
-// 要求用反斜杠转义四个符号: " \ { }
-// 其中花括号是用来包裹变量的, 这个被包裹的变量必须实现了 to_string()函数.
-// TODO: raw_string. 前面加r#..#".
-// TODO: 三引号里的引号, 我想让里面的引号转义, 但没有实现,
-//       这个当转移到rust中的时候会有bug
-// """ abc " """ 会转成 " abc " ", rust 要报错
-// 这个的解决办法是在ide中集成, 
-// 在ide中有个快捷键或者 个引号会触发一个文本编辑器,
-// 在里面编辑想要的文本.
-string_literal = {
-      triple_quote_string
-    | quote_string
-    | raw_string
-}
-
-triple_quote_string = ${ PUSH("\"\"\"") ~ NEWLINE ~ inner_string ~ POP }
-quote_string = ${ PUSH("\"") ~ inner_string ~ POP }
-raw_string = ${ "r" ~ PUSH("#"*) ~ "\"" ~ inner_string ~ "\"" ~ POP }
-
 inner_string = ${ (!(PEEK) ~ ANY)* }
-
-// TODO: type tuple_type or_type
-def_fn_head_result = {
-      "->"
-    ~ identifier
-}
-
-variable_def_head = {
-      identifier
-    ~ ":"
-    ~ identifier
-}
-
-// 本语言对 空格 换行 tab符 不敏感.
-// 也就是说理论上任何两个非原子语法之间,
-// 都可以插入上述三种符号的任意组合而不改变语法的含义.
-// 但是鉴于可能会有非原本含义的误解析,
-// 比如会出现如果忘记打分号, 会把两行解析到一块的"误解".
-// 在有 换行, tab, 三个及三个以上空格 的情况下, 解析器不会自动去"修改优化"代码,
-// 而是会要求手动修改.
-DOT = _{ "." }
-
-// TODO: 目前没有很好的 to_rust注释 的方法, 暂时把注释放在whitespace里, 跳过不解析.
 WHITESPACE   = _{ " " | "\t" | NEWLINE | comment}
 
-line_comment   = _{ ("//" ~ !("/" | "!") ~ (!NEWLINE ~ ANY)*) }
-block_comment  = _{ "/*" ~ (block_comment | !"*/" ~ ANY)* ~ "*/" }
-comment        = _{ block_comment | line_comment }
+// 具有固定数量子规则的规则, 用 inner_rules.next().unwrap() 解析.
+def_fn                  = { keyword_def_fn_start ~ DOT ~ def_fn_head ~ def_fn_body }
+def_fn_body             = { "{" ~ statement* ~ expression? ~ "}" }
+function_call_statement = { function_call_expr ~ ";" }
+quote_string            = ${ PUSH("\"") ~ inner_string ~ POP }
+raw_string              = ${ "r" ~ PUSH("#"*) ~ "\"" ~ inner_string ~ "\"" ~ POP }
+triple_quote_string     = ${ PUSH("\"\"\"") ~ NEWLINE ~ inner_string ~ POP }
+tuple_expr              = { "(" ~ expression ~ ("," ~ expression)* ~ ","? ~")" }
+type_expr               = { identifier ~ ":" ~ type_name }
 
-//////////////////////////////////////////////////
-// 以下是 原子规则
+// silent
+keyword_def_fn_start = _{ "fn" }
+DOT                  = _{ "." }
+line_comment         = _{ ("//" ~ !("/" | "!") ~ (!NEWLINE ~ ANY)*) }
+block_comment        = _{ "/*" ~ (block_comment | !"*/" ~ ANY)* ~ "*/" }
+comment              = _{ block_comment | line_comment }
 
+// 原子规则
 keyword = @{
-    "abstract" | "as" | "become" | "break" | "byte" | "class" | "clear" |
-    "const" | "continue" | "do" | "else" | "enum" | "eval" | "export" |
-    "extern" | "false" | "final" | "fn" | "for" | "if" | "impl" | "import" |
-    "in" | "let" | "loop" | "match" | "mod" | "move" | "mut" | "of" |
-    "out" | "pub" | "raw" | "ref" | "return" | "self" | "static" |
-    "struct" | "super" | "trait" | "true" | "typeof" | "type" | "unsafe" |
-    "use" | "where" | "while" | "yield"
+        "abstract" | "as" | "become" | "break" | "byte" | "class" | "clear" |
+        "const" | "continue" | "do" | "else" | "enum" | "eval" | "export" |
+        "extern" | "false" | "final" | "fn" | "for" | "if" | "impl" | "import" |
+        "in" | "let" | "loop" | "match" | "mod" | "move" | "mut" | "of" |
+        "out" | "pub" | "raw" | "ref" | "return" | "self" | "static" |
+        "struct" | "super" | "trait" | "true" | "typeof" | "type" | "unsafe" |
+        "use" | "where" | "while" | "yield"
 }
 
 // 变量不能以数字或者下划线+数字开头
-identifier = @{
+identifier = ${
       !( keyword | ("_"* ~ NUMBER) )
     ~ identifier_atomic
     ~ ( " "
@@ -215,19 +134,8 @@ identifier = @{
 }
 
 // TODO: 这个 rule 运行的时候并不如设想的那样是 silent, 可能有bug
-identifier_atomic = @{ ("_"* ~ (LETTER | NUMBER)+ ~ "_"*)+ }
+identifier_atomic = ${ ("_"* ~ (LETTER | NUMBER)+ ~ "_"*)+ }
 
-// 标准数字格式是 数字 + 空格 或者 数字 + 下划线 的形式.
-// 第一位必须是数字, 下划线和空格不能混用.
-// 合法: 001 002  => 1002
-// 合法: 012 003  => 12003
-// 合法: 01 2 0 0 3  => 12003
-// 合法: 12 003  => 12003
-// 合法: 12_0_0_3  => 12003
-// 合法: 12_003  => 12003
-// 不合法: _12 003  => 12003 // 第一位必须是数字
-// 不合法: 12__003  => 12003 // 数字之间只能有一个空格或者下划线
-// 不合法: 1 112__003  => 1112003 // 空格和下划线不能混用
 number_literal = @{
       ( NUMBER+
       ~ ( " " ~ NUMBER+)+
