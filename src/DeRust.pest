@@ -1,43 +1,40 @@
-file = {
-      SOI
-    ~ ( def_fn
-      /* | comment */
-    // TODO: 其他模块
-      )*
-    ~ EOI
-}
-
 def_fn_head = {
       ( ( identifier
-          ~ ( "(" ~ ( type_expr ~ ( "," ~ type_expr )* ~ ","? )
+          ~ ( "(" ~ ( ","? ~ type_expr ~ ( "," ~ type_expr )* ~ ","? )
             ~ ")" ~ identifier_atomic +
             )+
-          ~ ( "(" ~ ( type_expr ~ ( "," ~ type_expr )* ~ ","? 
+          ~ ( "(" ~ ( ","? ~ type_expr ~ ( "," ~ type_expr )* ~ ","? 
                     )?
             ~ ")"
             )?
         )
       | ( identifier
-        ~ "(" ~ ( type_expr ~ ( "," ~ type_expr )* ~ ","?
+        ~ "(" ~ ( ","? ~ type_expr ~ ( "," ~ type_expr )* ~ ","?
                 )?
         ~ ")"
       ) )
     ~ ( "->" ~ type_name )?
 }
 
+// TODO: 考虑加入这样的形式: f [1, 2, 3] f ()
+// 就是说, 如果参数是一个数组, 圆括号可以省略.
+// map (array) by { |x|
+//    x * 3
+// }
+// 考虑函数作为参数的情况.
 function_call_expr = {
       ( identifier
-      ~ ( "(" ~ ( expression ~ ( "," ~ expression )* ~ ","?
+      ~ ( "(" ~ ( ","? ~ expression ~ ( "," ~ expression )* ~ ","?
                 )?
         ~ ")" ~ identifier_atomic +
         )+
-      ~ ( "(" ~ ( expression ~ ( "," ~ expression )* ~ ","?
+      ~ ( "(" ~ ( ","? ~ expression ~ ( "," ~ expression )* ~ ","?
                 )?
         ~ ")"
         )?
       )
     | ( identifier
-      ~ "(" ~ ( expression ~ ( "," ~ expression )* ~ ","?
+      ~ "(" ~ ( ","? ~ expression ~ ( "," ~ expression )* ~ ","?
               )?
       ~ ")"
       )
@@ -49,7 +46,7 @@ statement = { function_call_statement
     // TODO
 }
 expression = { function_call_expr | type_expr | expr_literal | tuple_expr | identifier
-    /* | array_expr                         */
+    | array_expr
     /* | method_call_expr                   */
     /* | binary_expr                        */
     /* | unary_expr // 一元操作         */
@@ -88,23 +85,42 @@ type_name = { identifier
     /* /* | */ // TODO 其他enum: (<i32>,<i32>) [<i32>]  */
     // TODO: type tuple_type or_type ...
 }
-expr_literal   = { bool_literal | number_literal | string_literal }
+expr_literal   = { bool_literal | measure_with_number | number_literal | string_literal }
 string_literal = { triple_quote_string | quote_string | raw_string }
+array_expr = { array_repeat | array_some | array_none }
 
-// 紧凑型 raw string, 可直接返回原值的规则
+//  直接返回 pair.as_str() 的规则
 bool_literal = { "true" | "false" }
 inner_string = ${ (!(PEEK) ~ ANY)* }
+quote_string = ${ PUSH("\"") ~ inner_string ~ POP }
+raw_string   = ${ "r" ~ PUSH("#"*) ~ "\"" ~ inner_string ~ "\"" ~ POP }
 WHITESPACE   = _{ " " | "\t" | NEWLINE | comment}
+array_none = { "[" ~ "]" }
+
+// 直接对 pair.as_str() 处理的规则
+number_literal = { number_with_underline | number_with_space | number_pure }
+measure_with_number = ${ number_literal ~ " "{,3} ~ LETTER+ }
+// 变量不能以数字或者下划线+数字开头
+identifier = ${ !( keyword | ("_"* ~ NUMBER) ) ~ identifier_atomic ~ ( " " ~ identifier_atomic )* }
+// TODO: 这个 rule 运行的时候并不如设想的那样是 silent, 可能有bug
+// 添加unicode字符
+identifier_atomic = ${ ("_"* ~ (LETTER | NUMBER)+ ~ "_"*)+ }
 
 // 具有固定数量子规则的规则, 用 inner_rules.next().unwrap() 解析.
 def_fn                  = { keyword_def_fn_start ~ DOT ~ def_fn_head ~ def_fn_body }
-def_fn_body             = { "{" ~ statement* ~ expression? ~ "}" }
 function_call_statement = { function_call_expr ~ ";" }
-quote_string            = ${ PUSH("\"") ~ inner_string ~ POP }
-raw_string              = ${ "r" ~ PUSH("#"*) ~ "\"" ~ inner_string ~ "\"" ~ POP }
 triple_quote_string     = ${ PUSH("\"\"\"") ~ NEWLINE ~ inner_string ~ POP }
-tuple_expr              = { "(" ~ expression ~ ("," ~ expression)* ~ ","? ~")" }
 type_expr               = { identifier ~ ":" ~ type_name }
+array_repeat = { "[" ~ expression ~ ";" ~ number_literal ~ "]" }
+
+// 具有不固定数量子规则的规则, 用 for subpair in pair.into_inner() 解析
+array_some = { "[" ~ ","? ~ expression ~ ("," ~ expression)* ~ ","? ~ "]" }
+def_fn_body = { "{" ~ statement* ~ expression? ~ "}" }
+tuple_expr  = { "(" ~  expression ~ ("," ~ expression)* ~ ","? ~")" }
+file = { SOI ~ ( def_fn
+      /* | comment */
+    // TODO: 其他模块
+      )* ~ EOI }
 
 // silent
 keyword_def_fn_start = _{ "fn" }
@@ -124,25 +140,8 @@ keyword = @{
         "use" | "where" | "while" | "yield"
 }
 
-// 变量不能以数字或者下划线+数字开头
-identifier = ${
-      !( keyword | ("_"* ~ NUMBER) )
-    ~ identifier_atomic
-    ~ ( " "
-        ~ identifier_atomic
-      )*
-}
-
-// TODO: 这个 rule 运行的时候并不如设想的那样是 silent, 可能有bug
-identifier_atomic = ${ ("_"* ~ (LETTER | NUMBER)+ ~ "_"*)+ }
-
-number_literal = @{
-      ( NUMBER+
-      ~ ( " " ~ NUMBER+)+
-      )
-    | ( NUMBER+
-      ~ ( "_" ~ NUMBER+)+
-      )
-    | NUMBER+
-}
+number_with_underline = @{ ( NUMBER+ ~ "_"{1, 3} )+ ~ (NUMBER+)?
+    | ( "_"{1, 3} ~ NUMBER+ )+ ~ "_"{, 3} }
+number_with_space =     @{ NUMBER+ ~ (" "{1, 3} ~ NUMBER+)+ }
+number_pure = @{ NUMBER+ }
 

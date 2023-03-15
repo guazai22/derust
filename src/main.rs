@@ -11,40 +11,68 @@ use std::process::Command;
 #[grammar = "DeRust.pest"]
 pub struct DeRustParser;
 
-fn main() -> std::io::Result<()> {
-    let rule_test = "0001_def_fn__function_call";
+fn main() {
+    let rule_testing =
+        //# 规则条目:
+        // "0001_def_fn__function_call"
+        // "0002_array_expr"
+        "0003_number_literal"
+    ;
 
-    let input = fs::read_to_string(&(String::from("./test/") + rule_test + ".drs")).expect("cannot read file");
+    let input = fs::read_to_string(&(String::from("./test/") + rule_testing + ".drs")).expect("cannot read file");
     let pair = DeRustParser::parse(Rule::file, &input).unwrap().next().unwrap();
-    println!("{:#?}", pair.clone()); //test
-    let s: String = output(pair);
+    let inital_rs_file: String = output(pair);
 
-    let rust_file_path = String::from("./test/") + rule_test + ".drs.rs";
-    println!("\nRAW RUST FILE:\n    {:?}", s);
-    fs::write(&rust_file_path, &s)?;
+    let rust_file_path = String::from("./test/") + rule_testing + ".drs.rs";
+    println!("\nRAW RUST FILE:\n    {:?}", inital_rs_file);
+    fs::write(&rust_file_path, &inital_rs_file).unwrap();
     Command::new("rustfmt").arg(&rust_file_path).status().expect("");
-    println!("\nRUST FILE:\n");
+    println!("\nFORMATED RUST FILE:");
     Command::new("cat").arg(&rust_file_path).status().expect("");
+    println!("\nDONE: {}.drs", rule_testing);
 
-    println!("\nDONE: {}.drs", rule_test);
-    // test_except(rule_test)
-    Ok(())
+    test_if_other_rules_still_good(rule_testing);
+    test_if_err_is_err();
 }
 
-fn test_except(present: &str) -> std::io::Result<()> {
+fn test_if_err_is_err() {
+    let mut mark = false;
+    for entry in fs::read_dir("./test").unwrap() {
+        let path = entry.unwrap().path();
+        let path = path.to_str().unwrap();
+        if path.ends_with(".err") {
+            let (_, err_file) = path.split_at(7);
+            let mut i = 0;
+
+            for line in fs::read_to_string(path).unwrap().lines() {
+                i = i + 1;
+                if let Ok(_) = DeRustParser::parse(Rule::file, line) {
+                    if mark == false {
+                        println!("\nGOOD LINES IN ERR FILE:");
+                        mark = true;
+                    }
+                    println!("   {}:   line {}", err_file, i);
+                }
+            }
+        }
+    }
+}
+
+fn test_if_other_rules_still_good(present: &str) {
     let mut mark = false;
     let mut i: i32 = 1;
-    for entry in fs::read_dir("./test")? {
+
+    for entry in fs::read_dir("./test").unwrap() {
         let file = entry.unwrap().path();
         let file = file.to_str().unwrap();
+
         if file.ends_with(".drs") && !file.ends_with(&(String::from(present) + ".drs")) {
             let drs_content = fs::read_to_string(file).expect("err when read {file}");
             let pair = DeRustParser::parse(Rule::file, &drs_content).unwrap().next().unwrap();
             let s: String = output(pair);
 
             let temp_file = String::from("./test/temp/") + &(i.to_string());
-
-            fs::write(&temp_file, &s)?;
+            fs::write(&temp_file, &s).unwrap();
             Command::new("rustfmt").arg(&temp_file).status().expect("");
 
             let rs_content = fs::read_to_string(String::from(file) + ".rs").expect("err when read {file}");
@@ -53,30 +81,28 @@ fn test_except(present: &str) -> std::io::Result<()> {
             if rs_content != now_content {
                 let (_, temp_s) = file.split_at(7);
                 if mark == false {
-                    println!("\nChanged file:");
+                    println!("\nthese files are parsed diffriently from last time:");
                 }
                 println!("    {temp_s}.rs");
                 let now_rust_file_path = String::from(file) + ".rs.now";
-                fs::write(&now_rust_file_path, &now_content)?;
+                fs::write(&now_rust_file_path, &now_content).unwrap();
                 mark = true;
             }
             i = i + 1;
         }
     }
-    Ok(())
 }
 
 fn output(pair: Pair<Rule>) -> String {
     let mut s = String::new();
     let rule = pair.as_rule();
+
+    // 具有不固定数量的不同各类子规则的规则, 用
+    // for subpair in pair.into_inner() {
+    //     match subpair.as_rule() {
+    // 解析
     match rule {
-        | Rule::file => {
-            for subpair in pair.into_inner() {
-                s.push_str(&output(subpair));
-            }
-            return s;
-        },
-        | Rule::function_call_expr | Rule::function_call_statement => {
+        | Rule::function_call_expr => {
             let mut identifier = String::new();
             let mut parameters = String::new();
             for subpair in pair.into_inner() {
@@ -97,16 +123,7 @@ fn output(pair: Pair<Rule>) -> String {
             s.push_str("(");
             s.push_str(&parameters);
             s.push_str(")");
-            if rule == Rule::function_call_statement {
-                s.push_str(";");
-            }
             return s;
-        },
-        | Rule::number_literal => {
-            return pair.as_str().replace(" ", "_");
-        },
-        | Rule::identifier => {
-            return pair.as_str().replace(" ", "_");
         },
         | Rule::def_fn_head => {
             let mut identifier = String::new();
@@ -137,6 +154,23 @@ fn output(pair: Pair<Rule>) -> String {
             s.push_str(&result);
             return s;
         },
+
+        // 具有不固定数量同样子规则的规则, 用 for subpair in pair.into_inner() 解析
+        | Rule::array_some => {
+            s.push_str("[");
+            for subpair in pair.into_inner() {
+                s.push_str(&output(subpair));
+                s.push_str(",");
+            }
+            s.push_str("]");
+            return s;
+        },
+        | Rule::file => {
+            for subpair in pair.into_inner() {
+                s.push_str(&output(subpair));
+            }
+            return s;
+        },
         | Rule::def_fn_body => {
             s.push_str("{");
             for subpair in pair.into_inner() {
@@ -154,16 +188,8 @@ fn output(pair: Pair<Rule>) -> String {
             s.push_str(")");
             return s;
         },
-        // TODO: test
-        | Rule::triple_quote_string => {
-            s.push_str("\"");
-            s.push_str(&output(pair.into_inner().next().unwrap()));
-            s.pop();
-            s.push_str("\"");
-            return s;
-        },
 
-        // 具有固定子规则的规则, 用 inner_rules.next().unwrap() 解析.
+        // 具有固定数量子规则的规则, 用 inner_rules.next().unwrap() 解析.
         | Rule::def_fn => {
             let mut inner_rules = pair.into_inner();
             s.push_str("fn ");
@@ -178,26 +204,62 @@ fn output(pair: Pair<Rule>) -> String {
             s.push_str(&output(inner_rules.next().unwrap()));
             return s;
         },
+        | Rule::function_call_statement => {
+            let mut inner_rules = pair.into_inner();
+            s.push_str(&output(inner_rules.next().unwrap()));
+            s.push_str(";");
+            return s;
+        },
+        | Rule::array_repeat => {
+            let mut inner_rules = pair.into_inner();
+            s.push_str("[");
+            s.push_str(&output(inner_rules.next().unwrap()));
+            s.push_str(";");
+            s.push_str(&output(inner_rules.next().unwrap()));
+            s.push_str("]");
+            return s;
+        },
+
+        // TODO: test
+        | Rule::triple_quote_string => {
+            s.push_str("\"");
+            s.push_str(&output(pair.into_inner().next().unwrap()));
+            s.pop();
+            s.push_str("\"");
+            return s;
+        },
 
         // enmu类规则 直接跳到 子规则
-        | Rule::type_name | Rule::string_literal | Rule::expression | Rule::statement | Rule::expr_literal => {
+        | Rule::array_expr
+        | Rule::type_name
+        | Rule::string_literal
+        | Rule::expression
+        | Rule::statement
+        | Rule::expr_literal => {
             return output(pair.into_inner().next().unwrap());
         },
 
-        // 直接返回原值的规则
-        | Rule::quote_string
-        | Rule::raw_string
-        | Rule::inner_string
-        | Rule::bool_literal
-        | Rule::identifier_atomic
-        | Rule::EOI => {
-            return String::from(pair.as_str());
+        // 直接对 pair.as_str() 处理的规则
+        | Rule::identifier | Rule::measure_with_number | Rule::number_literal => {
+            return pair.as_str().replace(" ", "_");
         },
 
-        // TODO: 这里的规则都是待处理的规则, 穷尽规则之后必须把这条直接删除.
+        //  直接返回 pair.as_str() 的规则
+        | Rule::array_none
+        | Rule::bool_literal
+        | Rule::EOI
+        | Rule::identifier_atomic
+        | Rule::inner_string
+        | Rule::quote_string
+        | Rule::raw_string => {
+            return pair.as_str().to_string();
+        },
+
+        // TODO: 这里显示的规则都是待处理的规则, 理论上不该match _ ,
+        // 以后穷尽规则之后必须把这条直接删除.
         | _ => {
             println!("skip rule: {:?}\n{:?}", pair.as_rule(), pair.as_str());
-            return String::from(pair.as_str());
+            return pair.as_str().to_string();
         },
     }
 }

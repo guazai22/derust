@@ -15,7 +15,7 @@ in pkgs.mkShell {
   buildInputs = rust_pkgs ++ depended_pkgs;
   RUST_BACKTRACE = 1;
   shellHook = ''
-    echo hello, nix-shell_of_rust!
+    echo hello, nix-shell for rust!
   '';
   # CARGO_TARGET_DIR = "/mnt/A/Rust_target/";
   CARGO_TARGET_DIR = "/home/gz/Rust_target_Developing/";

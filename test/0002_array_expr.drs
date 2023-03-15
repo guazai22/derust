@@ -1,0 +1,21 @@
+// array_expr
+fn. array_expr () -> array {
+    f (
+        , [1, 2, 3]
+        , [a, b, c]
+        , [a b, cd, e f]
+        , []
+        , [  ]
+        , [f(a), f(b), f f (c d)]
+        , [
+            , longgggggggggggggggggggggggggggggggggggg
+            , b
+            , c
+            , d
+            ,
+          ]
+        , [3; 2]
+        , [f a b c(333); 3]
+        , ["a b c "; 3]
+    );
+}

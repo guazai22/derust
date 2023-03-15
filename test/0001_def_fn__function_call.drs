@@ -33,9 +33,11 @@ fn. ab cd e (mn: mn, n: n) fg hij (m: n) kml (m: n) {
     abc de (m) fg (n) hi;
     abc de (m) fg (n) hi();
     abc de (m) pg (n) hi(k);
+    abc(,n,m);
+    abc ed
 }
 
-fn. ab cd e (m n: n m) fg hij (m: n) kml (m: n) {
-    abc abc ( abc abc (abc abc a)aa  );
-    "123"
+fn. ab cd e (,m n: n m) fg hij (m: n) kml (m: n) {
+    f ( abc abc (abc abc a)aa  );
+    f ( abc de (f, g) hij (k) lm (n, o) p);
 }
