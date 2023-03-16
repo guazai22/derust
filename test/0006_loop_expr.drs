@@ -46,6 +46,7 @@ fn. f () {
             abc
         }
         , loop for i i in iter() {
+
             abc
         }
     );
