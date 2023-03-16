@@ -1,0 +1,2 @@
+fn. f () { fn. (x: y) { println(n); 3 } }   // fn 后面加点了
+fn. f () { |x: y| { println(n); 3 } }

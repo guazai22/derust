@@ -1,0 +1,6 @@
+fn. f () { f (   if true { 123 } else if. true { 123 } else { 123 }   ) } // if 后面没加点
+fn. f () { f (  if. (true { 123 } else if. true { 123 } else { 123 }  ) }
+fn. f () { f (  if. (true { 123 } else if. true { 123 } else { 123 }  ) }
+fn. f () { f (  if. (true { 123 } else if {}   ) }
+fn. f () { f (  if. true    ) }
+fn. f () { f (  if. true {}   ) }

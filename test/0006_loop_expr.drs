@@ -1,0 +1,53 @@
+fn. f () {
+    f (
+        , loop {
+            123
+        }
+        , loop 3 times {
+            123
+        }
+        , loop 3 time {
+            123
+        }
+        , loop .a bc .times {
+            123
+        }
+        , loop. (a b c). time {
+            123
+        }
+        , loop. (a b c) time {
+            123
+        }
+        , loop (a b c). time {
+            123
+        }
+        , loop while. a (b) c {
+            123
+        }
+        , while. a (b) c {
+            123
+        }
+        , while (a (b) ) {
+            123
+        }
+        , while. (a (b) ) {
+            123
+        }
+        , loop while. (a (b) ) {
+            123
+        }
+        /* , loop for. (i) .in. (((((iter()))))) { */
+        /*     123                                 */
+        /* }                                       */
+        , loop for. i .in. abc {
+            abc
+        }
+        , loop for i in iter() {
+            abc
+        }
+        , loop for i i in iter() {
+            abc
+        }
+    );
+}
+

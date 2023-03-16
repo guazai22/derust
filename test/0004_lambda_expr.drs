@@ -1,19 +1,19 @@
-fn f() {
-    f(
-        |x: y| {
+fn. f () {
+    f (
+        fn (x: y) {
             println(n);
             3
         },
-        |x: y, m: n| {
+        fn (x: y, m: n) {
             println(n);
             3
         },
-        |a_b_c: y, m: n| {
+        fn (a b c: y, m: n) {
             println(n);
             3
         },
-        || {
-            abc();
+        fn () {
+            abc ();
             "123"
         },
     );
