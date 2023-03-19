@@ -1,30 +1,124 @@
-fn abc() {}
-fn abc(m: n) {}
-fn abc_de() {}
-fn abc_de(m: n) {}
-fn abc_de(m: n) {}
-fn abc_de(m: n) {}
-fn abc_de(m: n, m: n) {}
-fn ab_cd_e_fg(m: n) {}
-fn ab_cd_e_fg(m: n) {}
-fn ab_cd_e_fg(m: n, m: n) {}
-fn ab_cd_e_fg_hij(m: n) {}
-fn ab_cd_e_fg_hij(m: n) {}
-fn ab_cd_e_fg_hij(m: n, m: n) {}
-fn ab_cd_e_fg_hij_kml(m: n, m: n, m: n) {}
-fn ab_cd_e_fg_hij_kml(mn: mn, n: n, m: n, m: n) {
-    abc();
-    abc_de();
-    abc_de_fg();
-    abc_de_fg(n);
-    abc_de_fg_hi(n);
-    abc_de_fg_hi(m, n);
-    abc_de_fg_hi(m, n);
-    abc_de_pg_hi(m, n, k);
-    abc(n, m);
-    abc_ed
-}
-fn ab_cd_e_fg_hij_kml(m_n: n_m, m: n, m: n) {
-    f(abc_abc_aa(abc_abc_a));
-    f(abc_de_hij_lm_p(f, g, k, n, o));
+fn f() {
+    f(
+        loop {
+            f(state)
+        },
+        {
+            let mut i = 0;
+            while (i < (333_333)) {
+                i = i + 1;
+                state()
+            }
+        },
+        for (i) in (iter()) {
+            state()
+        },
+        while (b()) {
+            123
+        },
+        loop {
+            123
+        },
+        {
+            let mut i = 0;
+            while (i < (3)) {
+                i = i + 1;
+                123
+            }
+        },
+        {
+            let mut i = 0;
+            while (i < (aa_b_c)) {
+                i = i + 1;
+                123
+            }
+        },
+        {
+            let mut i = 0;
+            while (i < (abc_3)) {
+                i = i + 1;
+                123
+            }
+        },
+        {
+            let mut i = 0;
+            while (i < (a_bc)) {
+                i = i + 1;
+                123
+            }
+        },
+        {
+            let mut i = 0;
+            while (i < (a_bc)) {
+                i = i + 1;
+                123
+            }
+        },
+        {
+            let mut i = 0;
+            while (i < (a_bc)) {
+                i = i + 1;
+                123
+            }
+        },
+        {
+            let mut i = 0;
+            while (i < (1_times)) {
+                i = i + 1;
+                123
+            }
+        },
+        {
+            let mut i = 0;
+            while (i < (a_b_c)) {
+                i = i + 1;
+                123
+            }
+        },
+        while (a_c(b)) {
+            123
+        },
+        while (a_b_c) {
+            123
+        },
+        while (a_c(b)) {
+            123
+        },
+        while (a_c(b)) {
+            123
+        },
+        while (a_c(b)) {
+            123
+        },
+        for (i) in (iter) {
+            123
+        },
+        for (i) in (iter()) {
+            123
+        },
+        for (i) in (iter()) {
+            123
+        },
+        for (i) in (iter()) {
+            123
+        },
+        for (i) in (iter()) {
+            123
+        },
+        for (i) in (iter()) {
+            123
+        },
+        for (i_in) in (iter()) {
+            123
+        },
+        for (i) in (iter()) {
+            123
+        },
+        while (x_y) {
+            123
+        },
+        while (x(y)) {
+            123
+        },
+    );
 }

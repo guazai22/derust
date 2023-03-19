@@ -18,8 +18,9 @@ fn main() {
         // "0002_array_expr"
         // "0003_number_literal"
         // "0004_lambda_expr"
-        // "0005_if_expr"
-        "0006_loop_expr"
+        "0005_match_expr"
+        // "0006_loop_expr"
+        // "0007_if_expr"
     ;
 
     let input = fs::read_to_string(&(String::from("./test/") + rule_testing + ".drs")).expect("cannot read file");
@@ -183,7 +184,15 @@ fn output(pair: Pair<Rule>) -> String {
             }
             return s;
         },
-        | Rule::if_expr => {
+        | Rule::identifier => {
+            for subpair in pair.into_inner() {
+                s.push_str(&output(subpair));
+                s.push_str("_");
+            }
+            s.pop();
+            return s;
+        },
+        | Rule::if_expr | Rule::if_expr_rust | Rule::if_expr_derust => {
             for subpair in pair.into_inner() {
                 s.push_str(&output(subpair));
             }
@@ -196,6 +205,15 @@ fn output(pair: Pair<Rule>) -> String {
                 s.push_str(", ");
             }
             s.push_str("|");
+            return s;
+        },
+        | Rule::match_branches_expr => {
+            s.push_str("{");
+            for subpair in pair.into_inner() {
+                s.push_str(&output(subpair));
+                s.push_str(", ");
+            }
+            s.push_str("}");
             return s;
         },
         | Rule::tuple_expr => {
@@ -222,46 +240,70 @@ fn output(pair: Pair<Rule>) -> String {
             s = format!("fn {} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
             return s;
         },
+        | Rule::else_branch => {
+            let mut inner_rules = pair.into_inner();
+            s = format!("else {}", output(inner_rules.next().unwrap()));
+            return s;
+        },
+        | Rule::else_if_branch => {
+            let mut inner_rules = pair.into_inner();
+            s = format!("else if {} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            return s;
+        },
+        | Rule::if_branch => {
+            let mut inner_rules = pair.into_inner();
+            s = format!("if {} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            return s;
+        },
         | Rule::lambda_expr => {
             let mut inner_rules = pair.into_inner();
             s = format!("{} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
             return s;
         },
-        | Rule::loop_for_parameter => {
-            let mut inner_rules = pair.into_inner();
-            s = format!("({}) in ({})", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
-            return s;
-        },
         | Rule::loop_times_expr => {
-            let mut inner_rules = pair.clone().into_inner();
+            let mut inner_rules = pair.into_inner();
             let first_inner_rule = inner_rules.next().unwrap();
-            if first_inner_rule.as_rule() == Rule::loop_times_parameter {
+            if first_inner_rule.as_rule() == Rule::expression {
                 s.push_str(" { let mut i = 0;  while ( i < ( ");
-                s.push_str(&output(first_inner_rule.into_inner().next().unwrap()));
+                s.push_str(&output(first_inner_rule));
                 s.push_str(")) { i = i + 1;");
                 for subpair in inner_rules.next().unwrap().into_inner() {
                     s.push_str(&output(subpair));
                 }
                 s.push_str("}}");
             } else {
-                s.push_str(pair.as_str());
+                s = format!("loop {}", &output(first_inner_rule));
             }
-
             return s;
         },
         | Rule::loop_for_expr => {
             let mut inner_rules = pair.into_inner();
-            s = format!("for {} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()),);
-            return s;
-        },
-        | Rule::loop_while_condition => {
-            let mut inner_rules = pair.into_inner();
-            s = format!("({})", output(inner_rules.next().unwrap()));
+            s = format!(
+                "for ({}) in ({}) {}",
+                output(inner_rules.next().unwrap()),
+                output(inner_rules.next().unwrap()),
+                output(inner_rules.next().unwrap()),
+            );
             return s;
         },
         | Rule::loop_while_expr => {
             let mut inner_rules = pair.into_inner();
             s = format!("while ({}) {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            return s;
+        },
+        | Rule::match_expr => {
+            let mut inner_rules = pair.into_inner();
+            s = format!("match {} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            return s;
+        },
+        | Rule::match_branch_expr => {
+            let mut inner_rules = pair.into_inner();
+            s = format!("{} => {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            return s;
+        },
+        | Rule::match_branch_else_expr => {
+            let mut inner_rules = pair.into_inner();
+            s = format!("_ => {}", output(inner_rules.next().unwrap()));
             return s;
         },
         | Rule::type_expr => {
@@ -294,11 +336,6 @@ fn output(pair: Pair<Rule>) -> String {
             s = format!("else {}", output(inner_rules.next().unwrap()));
             return s;
         },
-        | Rule::if_parameter => {
-            let mut inner_rules = pair.into_inner();
-            s = format!("{}", output(inner_rules.next().unwrap()));
-            return s;
-        },
         // TODO: test
         | Rule::triple_quote_string => {
             s.push_str("\"");
@@ -309,7 +346,7 @@ fn output(pair: Pair<Rule>) -> String {
         },
 
         // 直接对 pair.as_str() 处理的规则
-        | Rule::identifier | Rule::identifier_except_in | Rule::measure_with_number | Rule::number_literal => {
+        | Rule::measure_with_number | Rule::number_literal => {
             return pair.as_str().replace(" ", "_");
         },
 
@@ -330,8 +367,6 @@ fn output(pair: Pair<Rule>) -> String {
         | Rule::expr_literal
         | Rule::expression
         | Rule::loop_expr
-        | Rule::loop_for_identifier
-        | Rule::loop_for_iter
         | Rule::statement
         | Rule::string_literal
         | Rule::type_name => {

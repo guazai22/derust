@@ -1,22 +1,20 @@
 loop_expr = { loop_for_expr | loop_while_expr | loop_times_expr }
 
-loop_for_expr = { keyword_loop_for ~ loop_for_parameter ~ block_expr }
-keyword_loop_for = _{ "loop"? ~ "for" }
-keyword_in = _{ "in" }
-loop_for_parameter = { loop_for_identifier ~ keyword_in ~ loop_for_iter
-    | identifier_except_in ~ keyword_in ~ expression }
-loop_for_identifier = { DOT ~ identifier ~ DOT | DOT? ~ "(" ~ identifier ~ ")" ~ DOT? }
-loop_for_iter = { DOT ~ expression | DOT? ~ "(" ~ expression ~ ")" }
-/* except_in_expr = { identifier_except_in | function_call_expr_except_in } */
+loop_for_expr = { KEYWORD_loop_for ~ DOT?
+    ~ ( "(" ~identifier ~ ")" ~ DOT? | identifier ~ DOT ) ~ KEYWORD_in ~ DOT? ~ expression ~ block_expr }
+KEYWORD_loop_for = _{ "loop"? ~ "for" }
+KEYWORD_in = _{ "in" }
 
-loop_while_expr = { keyword_loop_while ~ loop_while_condition ~ block_expr }
-keyword_loop_while = _{ "loop"? ~ "while" }
-loop_while_condition = { DOT ~ expression | DOT? ~ "(" ~ expression ~ ")" }
+loop_while_expr = { KEYWORD_loop_while ~ DOT? ~ expression ~ block_expr }
+KEYWORD_loop_while = _{ "loop"? ~ "while" }
 
-loop_times_expr = { keyword_loop ~ ( loop_times_parameter ~ keyword_times )? ~ block_expr }
-keyword_loop = _{ "loop" }
-loop_times_parameter = { DOT ~ expression ~ DOT | DOT? ~ "(" ~ expression ~ ")" ~ DOT? | number_literal }
-keyword_times = _{ "times" | "time" }
+loop_times_expr = { KEYWORD_loop ~ DOT?
+    ~ ( ( "(" ~ expression ~ ")" ~ DOT? | expression ~ DOT ) ~ KEYWORD_times
+      )?
+    ~ block_expr
+}
+KEYWORD_loop = _{ "loop" }
+KEYWORD_times = _{ "times" | "time" }
 
 def_fn_head = {
       ( ( identifier
@@ -59,23 +57,6 @@ function_call_expr = {
       ~ ")"
       )
 }
-function_call_expr_except_in = {
-      ( identifier_except_in
-      ~ ( "(" ~ ( ","? ~ expression ~ ( "," ~ expression )* ~ ","?
-                )?
-        ~ ")" ~ identifier_atomic_except_in +
-        )+
-      ~ ( "(" ~ ( ","? ~ expression ~ ( "," ~ expression )* ~ ","?
-                )?
-        ~ ")"
-        )?
-      )
-    | ( identifier_except_in
-      ~ "(" ~ ( ","? ~ expression ~ ( "," ~ expression )* ~ ","?
-              )?
-      ~ ")"
-      )
-}
 
 // enum
 statement = { function_call_statement
@@ -92,8 +73,7 @@ expression = { function_call_expr | type_expr | expr_literal | tuple_expr | iden
     /* | let_expr                           */
     | if_expr
     | loop_expr  // TODO: while for loop
-    | brackt_expr // 为了解析多余的括号
-    /* | match_expr                         */
+    | match_expr
     /* | block_expr // 同上               */
     /* | async await                        */
     /* | try_block_expr                     */
@@ -117,8 +97,11 @@ expression = { function_call_expr | type_expr | expr_literal | tuple_expr | iden
     /* | includedbytes // ?                 */
     /* | formatargs // format_args!()       */
     /* | Err_expr                           */
+    | brackt_expr // 为了解析多余的括号
     // TODO
 }
+brackt_expr = { "(" ~ ","? ~ expression ~ ")" }
+
 type_name = { identifier
     /* /* | */ // TODO 其他enum: (<i32>,<i32>) [<i32>]  */
     // TODO: type tuple_type or_type ...
@@ -127,16 +110,32 @@ expr_literal   = { bool_literal | measure_with_number | number_literal | string_
 string_literal = { triple_quote_string | quote_string | raw_string }
 array_expr = { array_repeat | array_some | array_none }
 
-if_expr = { sub_if_expr ~ sub_else_if_expr* ~ sub_else_expr? }
-sub_if_expr = { keyword_if ~ if_parameter ~ block_expr }
-sub_else_if_expr = { keyword_else_if ~ if_parameter ~ block_expr }
-sub_else_expr = { keyword_else ~ block_expr }
+if_expr = { if_expr_rust | if_expr_derust }
+        KEYWORD_if = _{ "if" }
+        KEYWORD_else_if = _{ "else" ~ "if" }
+        KEYWORD_else = _{ "else" }
+        MARK_branch = _{ "," | "|" }
+    if_expr_rust = { sub_if_expr ~ sub_else_if_expr* ~ sub_else_expr? }
+        sub_if_expr = { KEYWORD_if ~ DOT? ~ expression ~ block_expr }
+        sub_else_if_expr = { KEYWORD_else_if ~ DOT? ~ expression ~ block_expr }
+        sub_else_expr = { KEYWORD_else ~ block_expr }
+    if_expr_derust = { KEYWORD_if ~ "(" ~ MARK_branch? ~ if_branch ~ ( MARK_branch ~ else_if_branch )*
+        ~ ( MARK_branch? ~ ")" ~ else_branch | MARK_branch? ~ ")" | ( MARK_branch ~ else_branch )? ~ ")" ) }
+        if_branch = { expression ~ block_expr }
+        else_if_branch = { expression ~ block_expr }
+        else_branch = { KEYWORD_else ~ block_expr }
 
-if_parameter = { DOT? ~ "(" ~ expression ~ ")" | DOT ~ expression }
+match_expr = { KEYWORD_if ~ DOT? ~ ( expression ~ DOT | "(" ~ expression ~ ")" ~ DOT? )
+    ~ KEYWORD_is ~ DOT? ~ match_branches_expr }
+    match_branches_expr = { "(" ~ MARK_branch? ~ match_branch_expr ~ ( MARK_branch ~ match_branch_expr )*
+        ~ ( MARK_branch? ~ ")" ~ match_branch_else_expr? | MARK_branch ~ match_branch_else_expr ~ ")" )
+        | match_branch_expr ~ match_branch_else_expr? }
+        // TODO: match 的参数, 是不是有限制.
+        match_branch_expr = { expression ~ block_expr }
+        match_branch_else_expr = { KEYWORD_else ~ block_expr }
+    KEYWORD_is = _ { "is" }
+
 block_expr = { "{" ~ statement* ~ expression ~ "}" }
-keyword_if = _{ "if" }
-keyword_else_if = _{ "else" ~ "if" }
-keyword_else = _{ "else" }
 
 //  直接返回 pair.as_str() 的规则
 bool_literal = { "true" | "false" }
@@ -150,18 +149,17 @@ array_none = { "[" ~ "]" }
 number_literal = { number_with_underline | number_with_space | number_pure }
 
 // 具有固定数量子规则的规则, 用 inner_rules.next().unwrap() 解析.
-def_fn                  = { keyword_def_fn_start ~ DOT ~ def_fn_head ~ fn_body }
+def_fn                  = { KEYWORD_def_fn_start ~ DOT? ~ def_fn_head ~ DOT? ~ fn_body }
 function_call_statement = { function_call_expr ~ ";" }
 triple_quote_string     = ${ PUSH("\"\"\"") ~ NEWLINE ~ inner_string ~ POP }
-brackt_expr = ${ "(" ~ expression ~ ")" }
 type_expr               = { identifier ~ ":" ~ type_name }
 array_repeat = { "[" ~ expression ~ ";" ~ number_literal ~ "]" }
-lambda_expr = { keyword_lambda_start ~ lambda_head ~ fn_body }
+lambda_expr = { KEYWORD_lambda_start ~ lambda_head ~ fn_body }
 
 // 具有不固定数量同样子规则的规则, 用 for subpair in pair.into_inner() 解析
 array_some = { "[" ~ ","? ~ expression ~ ("," ~ expression)* ~ ","? ~ "]" }
 fn_body = { "{" ~ statement* ~ expression? ~ "}" }
-tuple_expr  = { "(" ~  expression ~ ("," ~ expression)+ ~ ","? ~")" }
+tuple_expr  = { "(" ~ ","? ~ expression ~ ("," ~ expression)+ ~ ","? ~")" }
 file = { SOI ~ ( def_fn
       /* | comment */
     // TODO: 其他模块
@@ -169,15 +167,15 @@ file = { SOI ~ ( def_fn
 lambda_head = { "(" ~ (type_expr ~ ","?)* ~ ")" }
 
 // silent
-keyword_def_fn_start = _{ "fn" }
-keyword_lambda_start = _{ "fn" }
+KEYWORD_def_fn_start = _{ "fn" }
+KEYWORD_lambda_start = _{ "fn" }
 DOT                  = _{ "." }
 line_comment         = _{ ("//" ~ !("/" | "!") ~ (!NEWLINE ~ ANY)*) }
 block_comment        = _{ "/*" ~ (block_comment | !"*/" ~ ANY)* ~ "*/" }
 comment              = _{ block_comment | line_comment }
 
 // 原子规则
-keyword = @{
+KEYWORD = @{
         "abstract" | "as" | "become" | "break" | "byte" | "class" | "clear" |
         "const" | "continue" | "do" | "else" | "enum" | "eval" | "export" |
         "extern" | "false" | "final" | "fn" | "for" | "if" | "impl" | "import" |
@@ -190,15 +188,14 @@ keyword = @{
 number_with_underline = @{ ( NUMBER+ ~ "_"{1, 3} )+ ~ (NUMBER+)?
     | ( "_"{1, 3} ~ NUMBER+ )+ ~ "_"{, 3} }
 number_with_space =     @{ NUMBER+ ~ (" "{1, 3} ~ NUMBER+)+ }
-number_pure = @{ NUMBER+ }
 
 measure_with_number = ${ number_literal ~ " "{,3} ~ LETTER+ }
 // 变量不能以数字或者下划线+数字开头
-identifier = ${ !( keyword | ("_"* ~ NUMBER) ) ~ identifier_atomic ~ ( " " ~ identifier_atomic )* }
+identifier = ${ !( KEYWORD | ("_"* ~ NUMBER) ) ~ identifier_atomic ~ ( " " ~ identifier_atomic )*
+    | "(" ~ identifier ~ ")" }
+brackt_identifier = { "(" ~ ","? ~ identifier ~ ")" }
 // TODO: 这个 rule 运行的时候并不如设想的那样是 silent, 可能有bug
 // 添加unicode字符
 identifier_atomic = ${ ( "_"* ~ (LETTER | NUMBER)+ ~ "_"* )+ }
 
-identifier_atomic_except_in = ${ !"in" ~ ( "_"* ~ (LETTER | NUMBER)+ ~ "_"* )+ }
-identifier_except_in = ${ !( keyword | ("_"* ~ NUMBER) )
-    ~ identifier_atomic_except_in ~ ( " " ~ identifier_atomic_except_in )* }
+number_pure = @{ NUMBER+ }

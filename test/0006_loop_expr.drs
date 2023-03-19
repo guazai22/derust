@@ -1,53 +1,93 @@
 fn. f () {
     f (
+        // 标准语法
+        , loop {
+            f(state)
+        }
+        , loop (333 333) times {
+            state()
+        }
+        , loop for (i) .in (iter()) {
+            state()
+        }
+        , loop while (b()) {
+            123
+        }
+        // /////
+
         , loop {
             123
         }
-        , loop 3 times {
+        , loop 3 .times {
             123
         }
-        , loop 3 time {
+        , loop aa b c .times {
+            123
+        }
+        , loop abc 3 .time {
             123
         }
         , loop .a bc .times {
             123
         }
+        , loop a bc .times {
+            123
+        }
+        , loop. a bc .times {
+            123
+        }
+        , loop 1 times .times {
+            123
+        }
         , loop. (a b c). time {
             123
         }
-        , loop. (a b c) time {
+        , loop while. (a (b) c) {
             123
         }
-        , loop (a b c). time {
+
+        , while a b c {
             123
         }
-        , loop while. a (b) c {
+        , while a (b) c {
             123
         }
         , while. a (b) c {
             123
         }
-        , while (a (b) ) {
+        , while. a (b) c {
             123
         }
-        , while. (a (b) ) {
-            123
-        }
-        , loop while. (a (b) ) {
-            123
-        }
-        /* , loop for. (i) .in. (((((iter()))))) { */
-        /*     123                                 */
-        /* }                                       */
-        , loop for. i .in. abc {
-            abc
-        }
-        , loop for i in iter() {
-            abc
-        }
-        , loop for i i in iter() {
 
-            abc
+        , for i .in iter {
+            123
+        }
+        , loop for i .in iter() {
+            123
+        }
+        , loop for . i .in . iter() {
+            123
+        }
+        , loop for i .in . iter() {
+            123
+        }
+        , loop for . i .in . iter() {
+            123
+        }
+        , loop for . i .in  iter() {
+            123
+        }
+        , loop for. i in .in. iter() {
+            123
+        }
+        , for (i) .in iter() {
+            123
+        }
+        , loop while x y {
+            123
+        }
+        , loop while x(y) {
+            123
         }
     );
 }

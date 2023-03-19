@@ -13,16 +13,8 @@ use super::*;
 //     let _ = b"e";
 //     let _ = br"f";
 // }
-pub(crate) const LITERAL_FIRST: TokenSet = TokenSet::new(&[
-    T![true],
-    T![false],
-    INT_NUMBER,
-    FLOAT_NUMBER,
-    BYTE,
-    CHAR,
-    STRING,
-    BYTE_STRING,
-]);
+pub(crate) const LITERAL_FIRST: TokenSet =
+    TokenSet::new(&[T![true], T![false], INT_NUMBER, FLOAT_NUMBER, BYTE, CHAR, STRING, BYTE_STRING]);
 
 pub(crate) fn literal(p: &mut Parser<'_>) -> Option<CompletedMarker> {
     if !p.at_ts(LITERAL_FIRST) {
@@ -71,11 +63,11 @@ pub(super) fn atom_expr(p: &mut Parser<'_>, r: Restrictions) -> Option<(Complete
     }
     let la = p.nth(1);
     let done = match p.current() {
-        T!['('] => tuple_expr(p),
-        T!['['] => array_expr(p),
-        T![if] => if_expr(p),
-        T![let] => let_expr(p),
-        T![_] => {
+        | T!['('] => tuple_expr(p),
+        | T!['['] => array_expr(p),
+        | T![if] => if_expr(p),
+        | T![let] => let_expr(p),
+        | T![_] => {
             // test destructuring_assignment_wildcard_pat
             // fn foo() {
             //     _ = 1;
@@ -85,31 +77,31 @@ pub(super) fn atom_expr(p: &mut Parser<'_>, r: Restrictions) -> Option<(Complete
             p.bump(T![_]);
             m.complete(p, UNDERSCORE_EXPR)
         },
-        T![loop] => loop_expr(p, None),
-        T![box] => box_expr(p, None),
-        T![while] => while_expr(p, None),
-        T![try] => try_block_expr(p, None),
-        T![match] => match_expr(p),
-        T![return] => return_expr(p),
-        T![yield] => yield_expr(p),
-        T![do] if p.nth_at_contextual_kw(1, T![yeet]) => yeet_expr(p),
-        T![continue] => continue_expr(p),
-        T![break] => break_expr(p, r),
+        | T![loop] => loop_expr(p, None),
+        | T![box] => box_expr(p, None),
+        | T![while] => while_expr(p, None),
+        | T![try] => try_block_expr(p, None),
+        | T![match] => match_expr(p),
+        | T![return] => return_expr(p),
+        | T![yield] => yield_expr(p),
+        | T![do] if p.nth_at_contextual_kw(1, T![yeet]) => yeet_expr(p),
+        | T![continue] => continue_expr(p),
+        | T![break] => break_expr(p, r),
 
-        LIFETIME_IDENT if la == T![:] => {
+        | LIFETIME_IDENT if la == T![:] => {
             let m = p.start();
             label(p);
             match p.current() {
-                T![loop] => loop_expr(p, Some(m)),
-                T![for] => for_expr(p, Some(m)),
-                T![while] => while_expr(p, Some(m)),
+                | T![loop] => loop_expr(p, Some(m)),
+                | T![for] => for_expr(p, Some(m)),
+                | T![while] => while_expr(p, Some(m)),
                 // test labeled_block
                 // fn f() { 'label: {}; }
-                T!['{'] => {
+                | T!['{'] => {
                     stmt_list(p);
                     m.complete(p, BLOCK_EXPR)
                 },
-                _ => {
+                | _ => {
                     // test_err misplaced_label_err
                     // fn main() {
                     //     'loop: impl
@@ -125,20 +117,20 @@ pub(super) fn atom_expr(p: &mut Parser<'_>, r: Restrictions) -> Option<(Complete
         // fn f() { const { } }
         // fn f() { async { } }
         // fn f() { async move { } }
-        T![const] | T![unsafe] | T![async] if la == T!['{'] => {
+        | T![const] | T![unsafe] | T![async] if la == T!['{'] => {
             let m = p.start();
             p.bump_any();
             stmt_list(p);
             m.complete(p, BLOCK_EXPR)
         },
-        T![async] if la == T![move] && p.nth(2) == T!['{'] => {
+        | T![async] if la == T![move] && p.nth(2) == T!['{'] => {
             let m = p.start();
             p.bump(T![async]);
             p.eat(T![move]);
             stmt_list(p);
             m.complete(p, BLOCK_EXPR)
         },
-        T!['{'] => {
+        | T!['{'] => {
             // test for_range_from
             // fn foo() {
             //    for x in 0 .. {
@@ -150,18 +142,18 @@ pub(super) fn atom_expr(p: &mut Parser<'_>, r: Restrictions) -> Option<(Complete
             m.complete(p, BLOCK_EXPR)
         },
 
-        T![const] | T![static] | T![async] | T![move] | T![|] => closure_expr(p),
-        T![for] if la == T![<] => closure_expr(p),
-        T![for] => for_expr(p, None),
+        | T![const] | T![static] | T![async] | T![move] | T![|] => closure_expr(p),
+        | T![for] if la == T![<] => closure_expr(p),
+        | T![for] => for_expr(p, None),
 
-        _ => {
+        | _ => {
             p.err_and_bump("expected expression");
             return None;
         },
     };
     let blocklike = match done.kind() {
-        IF_EXPR | WHILE_EXPR | FOR_EXPR | LOOP_EXPR | MATCH_EXPR | BLOCK_EXPR => BlockLike::Block,
-        _ => BlockLike::NotBlock,
+        | IF_EXPR | WHILE_EXPR | FOR_EXPR | LOOP_EXPR | MATCH_EXPR | BLOCK_EXPR => BlockLike::Block,
+        | _ => BlockLike::NotBlock,
     };
     Some((done, blocklike))
 }
@@ -194,14 +186,7 @@ fn tuple_expr(p: &mut Parser<'_>) -> CompletedMarker {
         }
     }
     p.expect(T![')']);
-    m.complete(
-        p,
-        if saw_expr && !saw_comma {
-            PAREN_EXPR
-        } else {
-            TUPLE_EXPR
-        },
-    )
+    m.complete(p, if saw_expr && !saw_comma { PAREN_EXPR } else { TUPLE_EXPR })
 }
 
 // test array_expr
@@ -260,9 +245,9 @@ fn array_expr(p: &mut Parser<'_>) -> CompletedMarker {
 // }
 fn closure_expr(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(match p.current() {
-        T![const] | T![static] | T![async] | T![move] | T![|] => true,
-        T![for] => p.nth(1) == T![<],
-        _ => false,
+        | T![const] | T![static] | T![async] | T![move] | T![|] => true,
+        | T![for] => p.nth(1) == T![<],
+        | _ => false,
     });
 
     let m = p.start();
@@ -339,6 +324,7 @@ fn label(p: &mut Parser<'_>) {
 // fn foo() {
 //     loop {};
 // }
+//
 fn loop_expr(p: &mut Parser<'_>, m: Option<Marker>) -> CompletedMarker {
     assert!(p.at(T![loop]));
     let m = m.unwrap_or_else(|| p.start());
@@ -471,8 +457,8 @@ fn match_arm(p: &mut Parser<'_>) {
     }
     p.expect(T![=>]);
     let blocklike = match expr_stmt(p, None) {
-        Some((_, blocklike)) => blocklike,
-        None => BlockLike::NotBlock,
+        | Some((_, blocklike)) => blocklike,
+        | None => BlockLike::NotBlock,
     };
 
     // test match_arms_commas

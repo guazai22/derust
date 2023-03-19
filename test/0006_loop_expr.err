@@ -1,2 +1,2 @@
-fn. f () {   for i . in. k { m }   }
-fn. f () {   for. i  in( k) { m }   }
+fn f () { f (   loop time times { 123 }   ) }   // times 前面应该加点或者括号
+fn f () { f (   loop for i in in iter () { 123 }   ) }   // 同上, in
