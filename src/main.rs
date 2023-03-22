@@ -255,6 +255,14 @@ fn output(pair: Pair<Rule>) -> String {
             s = format!("if {} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
             return s;
         },
+        // | Rule::if_expr_when => {
+        //     let mut inner_rules = pair.into_inner();
+        //     let b = inner_rules.next().unwrap();
+        //     let a = inner_rules.next().unwrap();
+        //     let else_c = inner_rules.next().unwrap();
+        //     s = format!("if {} {} {}", a, b, else_c);
+        //     return s;
+        // },
         | Rule::lambda_expr => {
             let mut inner_rules = pair.into_inner();
             s = format!("{} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
@@ -291,7 +299,7 @@ fn output(pair: Pair<Rule>) -> String {
             s = format!("while ({}) {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
             return s;
         },
-        | Rule::match_expr => {
+        | Rule::match_expr_rust | Rule::match_expr_derust => {
             let mut inner_rules = pair.into_inner();
             s = format!("match {} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
             return s;
@@ -301,7 +309,7 @@ fn output(pair: Pair<Rule>) -> String {
             s = format!("{} => {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
             return s;
         },
-        | Rule::match_branch_else_expr => {
+        | Rule::match_branch_else_expr | Rule::underline_branch => {
             let mut inner_rules = pair.into_inner();
             s = format!("_ => {}", output(inner_rules.next().unwrap()));
             return s;
@@ -367,6 +375,7 @@ fn output(pair: Pair<Rule>) -> String {
         | Rule::expr_literal
         | Rule::expression
         | Rule::loop_expr
+        | Rule::match_expr
         | Rule::statement
         | Rule::string_literal
         | Rule::type_name => {

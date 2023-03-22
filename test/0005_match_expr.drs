@@ -1,16 +1,54 @@
 fn. f () {
     (
+     // 标准格式
+        , if x .is some(x) { 123 }
+        , if x .is some(x) { 123 } else { 223 }
+        , if x .is {
+            , Some(x) {
+                  print(1);
+                  123
+              }
+            , Ok(x) {
+                  223
+              }
+            , Ok(x) {
+                  323
+              }
+          } else {
+              423
+          }
+
         , if x .is 1 { 123 }
         , if x .is some(x) { 123 } else { 223 }
-        , if x .is (
+        , if x .is {
             , Some(x) { print(1); 123 }
             , else { 423 }
-          )
-        , if x .is (
+          }
+        , if x .is {
             , Some(x) { print(1); 123 }
+            , _ { 623 }
+          }
+        , if x .is {
+            , Some(x) {
+                print(1);
+                123
+              }
             , Ok(x) { 423 }
-          ) else {
+            , Ok(x) { 423 }
+          } else {
             523
           }
+        , match x {
+            , some(x) { 123 }
+            , some(x) { 223 }
+            , _ { 423 }
+          }
+        , match x {
+            , some(x) { 123 }
+            , else { 423 }
+          }
+        , match x {
+            , some(x) { 123 }
+          } else { 423 }
     )
 }

@@ -74,4 +74,25 @@
     当然, 在各个结构之间加括号是最清晰的办法
         for (number) in (numbers) {}
 
+# 分支语句
+    标准语法中, 分支语句都是以 if 关键字开头的.
+    标准语法中, 是没有 else if 这个用法的, else if 是作为语法糖的, 要被转变成标准语法.
+    if true { dosomething; } else { dosomething }
+    if {
+        , true { dosomething; }
+        , false { dosomething; }
+        , else { dosomething; }
+    }
+    match 语法是这样的. rust 式的 match 语法, 也是作为语法糖要最终要被格式化的.
+    if something .is a { dosomething; } else { dosomething; }
+    if something .is {
+        , a { dosomething; }
+        , b { dosomething; }
+        , else { dosomething; }
+    }
+    这个有点类似于变量声明语法. let 和 let mut.
+
+    也就是说, 在分支语句中, 如果只有一个或者两个分支, 可以用类似于传统的链式的语法,
+    但是对于三个或者三个以上的分支, 就要用括号括起来, 做成类似于表格样式的东西.
+
 

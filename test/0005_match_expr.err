@@ -1,5 +1,1 @@
-fn. f () { f (  if. (true { 123 } else if. true { 123 } else { 123 }  ) }
-fn. f () { f (  if. (true { 123 } else if. true { 123 } else { 123 }  ) }
-fn. f () { f (  if. (true { 123 } else if {}   ) }
-fn. f () { f (  if. true    ) }
-fn. f () { f (  if. true {}   ) }
+fn. f () {(  if x is y .{ 123 } else { 223 }  )}   // is 前面要加点

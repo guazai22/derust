@@ -63,7 +63,7 @@ statement = { function_call_statement
     /* | let_statement */
     // TODO
 }
-expression = { function_call_expr | type_expr | expr_literal | tuple_expr | identifier
+expression = { if_expr | function_call_expr | type_expr | expr_literal | tuple_expr | identifier
     | array_expr
     | lambda_expr
     /* | method_call_expr                   */
@@ -71,8 +71,7 @@ expression = { function_call_expr | type_expr | expr_literal | tuple_expr | iden
     /* | unary_expr // 一元操作         */
     /* | cast_expr  // foo as f64           */
     /* | let_expr                           */
-    | if_expr
-    | loop_expr  // TODO: while for loop
+    | loop_expr
     | match_expr
     /* | block_expr // 同上               */
     /* | async await                        */
@@ -87,7 +86,7 @@ expression = { function_call_expr | type_expr | expr_literal | tuple_expr | iden
     /* | addrof // &a &mut a                */
     /* | break_expr                         */
     /* | continue_expr // 要不要呢      */
-    /* | ret_expr // return abc             */
+    | return_expr
     /* | inlineasm maccall // ?             */
     /* | struct_expr // Foo {x: 1, y: 2}    */
     /* | repeat_expr // [1; 5]              */
@@ -101,6 +100,9 @@ expression = { function_call_expr | type_expr | expr_literal | tuple_expr | iden
     // TODO
 }
 brackt_expr = { "(" ~ ","? ~ expression ~ ")" }
+return_expr = { KEYWORD_return ~ expression }
+return_statement = { KEYWORD_return }
+KEYWORD_return = _{ "return" }
 
 type_name = { identifier
     /* /* | */ // TODO 其他enum: (<i32>,<i32>) [<i32>]  */
@@ -114,27 +116,39 @@ if_expr = { if_expr_rust | if_expr_derust }
         KEYWORD_if = _{ "if" }
         KEYWORD_else_if = _{ "else" ~ "if" }
         KEYWORD_else = _{ "else" }
+        KEYWORD_when = _{ "when" }
         MARK_branch = _{ "," | "|" }
     if_expr_rust = { sub_if_expr ~ sub_else_if_expr* ~ sub_else_expr? }
         sub_if_expr = { KEYWORD_if ~ DOT? ~ expression ~ block_expr }
         sub_else_if_expr = { KEYWORD_else_if ~ DOT? ~ expression ~ block_expr }
         sub_else_expr = { KEYWORD_else ~ block_expr }
-    if_expr_derust = { KEYWORD_if ~ "(" ~ MARK_branch? ~ if_branch ~ ( MARK_branch ~ else_if_branch )*
-        ~ ( MARK_branch? ~ ")" ~ else_branch | MARK_branch? ~ ")" | ( MARK_branch ~ else_branch )? ~ ")" ) }
+    if_expr_derust = { KEYWORD_if ~ "{" ~ MARK_branch? ~ if_branch ~ ( MARK_branch ~ else_if_branch )*
+        ~ ( MARK_branch? ~ "}" ~ else_branch | MARK_branch? ~ "}" | ( MARK_branch ~ else_branch )? ~ "}" ) }
         if_branch = { expression ~ block_expr }
         else_if_branch = { expression ~ block_expr }
         else_branch = { KEYWORD_else ~ block_expr }
+    // TODO when表达式
+    /* if_expr_when = { expression ~ DOT ~ KEYWORD_when ~ DOT? ~ expression */
+    /*     ~ ( DOT ~ KEYWORD_else ~ ( expression | block_expr ) )? }        */
 
-match_expr = { KEYWORD_if ~ DOT? ~ ( expression ~ DOT | "(" ~ expression ~ ")" ~ DOT? )
-    ~ KEYWORD_is ~ DOT? ~ match_branches_expr }
-    match_branches_expr = { "(" ~ MARK_branch? ~ match_branch_expr ~ ( MARK_branch ~ match_branch_expr )*
-        ~ ( MARK_branch? ~ ")" ~ match_branch_else_expr? | MARK_branch ~ match_branch_else_expr ~ ")" )
-        | match_branch_expr ~ match_branch_else_expr? }
-        // TODO: match 的参数, 是不是有限制.
+match_expr = { match_expr_rust | match_expr_derust }
+    match_expr_rust = { KEYWORD_match ~ DOT? ~ expression ~ match_branches_expr }
+    match_expr_derust = { KEYWORD_if ~ DOT?
+        ~ ( "(" ~ expression ~ ")" ~ DOT? | expression ~ DOT )
+        ~ KEYWORD_is ~ match_branches_expr }
+        match_branches_expr = { "{" ~ MARK_branch? ~ match_branch_expr ~ ( MARK_branch ~ match_branch_expr )*
+            ~ ( MARK_branch? ~ "}" ~ match_branch_else_expr?
+                | MARK_branch ~ ( match_branch_else_expr | underline_branch ) ~ "}" )
+                | match_branch_expr ~ match_branch_else_expr? }
+            // TODO: match 的参数, 是不是有限制.
         match_branch_expr = { expression ~ block_expr }
+        underline_branch = { "_" ~ block_expr }
         match_branch_else_expr = { KEYWORD_else ~ block_expr }
-    KEYWORD_is = _ { "is" }
+        KEYWORD_match = _{ "match" }
+        KEYWORD_is = _{ "is" }
 
+block = { block_expr | block_statement }
+block_statement = { "{" ~ statement* ~ "}" }
 block_expr = { "{" ~ statement* ~ expression ~ "}" }
 
 //  直接返回 pair.as_str() 的规则

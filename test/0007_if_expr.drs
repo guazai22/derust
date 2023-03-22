@@ -11,16 +11,17 @@ fn f() {
           } else if (x smaller than (y)) {
               223
           }
-        , if( , x bigger than (y) {
-                  123
-                }
-              , x smaller than (y) {
-                  223
-                }
-              , else {
-                  323
-                }
-          )
+        , if {
+            , x bigger than (y) {
+                123
+              }
+            , x smaller than (y) {
+                223
+              }
+            , else {
+                323
+              }
+          }
 
         , if x bigger then (y) {
               123
@@ -42,14 +43,14 @@ fn f() {
           } else {
               323
           }
-        , if( , x bigger then (y) {
+        , if{ , x bigger then (y) {
                   123
                 }
               , x smaller the (y) {
                   223
                 }
-          )
-        , if( , x bigger then (y) {
+          }
+        , if{ , x bigger then (y) {
                   123
                 }
               , x smaller the (y) {
@@ -58,15 +59,17 @@ fn f() {
               , else {
                   423
                 }
-          )
-        , if (  x bigger then (y) {
+          }
+        , if {  x bigger then (y) {
                   123
                 }
               , x smaller the (y) {
                   223
                 }
-          ) else {
+          } else {
               523
           }
+        /* , 123 .when x bigger than (y)           */
+        /* , 123 .when x bigger than (y) .else 223 */
     )
 }
