@@ -18,9 +18,11 @@ fn main() {
         // "0002_array_expr"
         // "0003_number_literal"
         // "0004_lambda_expr"
-        "0005_match_expr"
+        // "0005_match_expr"
         // "0006_loop_expr"
         // "0007_if_expr"
+        // "0008_block_return_expr"
+        "0009_def_fn"
     ;
 
     let input = fs::read_to_string(&(String::from("./test/") + rule_testing + ".drs")).expect("cannot read file");
@@ -64,7 +66,7 @@ fn test_if_err_is_err() {
 }
 
 fn test_if_other_rules_still_good(present: &str) {
-    let mut mark = false;
+    let mut has_print_title = false;
     let mut i: i32 = 1;
 
     for entry in fs::read_dir("./test").unwrap() {
@@ -85,13 +87,13 @@ fn test_if_other_rules_still_good(present: &str) {
 
             if rs_content != now_content {
                 let (_, temp_s) = file.split_at(7);
-                if mark == false {
+                if has_print_title == false {
                     println!("\nthese files are parsed diffriently from last time:");
                 }
                 println!("    {temp_s}.rs");
                 let now_rust_file_path = String::from(file) + ".rs.now";
                 fs::write(&now_rust_file_path, &now_content).unwrap();
-                mark = true;
+                has_print_title = true;
             }
             i = i + 1;
         }
@@ -130,9 +132,8 @@ fn output(pair: Pair<Rule>) -> String {
             s.push_str(")");
             return s;
         },
-        | Rule::def_fn_head => {
+        | Rule::fn_def_identifier_1 | Rule::fn_def_identifier_2plus => {
             let mut identifier = String::new();
-            let mut result = String::new();
             let mut parameters = String::new();
             for subpair in pair.into_inner() {
                 match subpair.as_rule() {
@@ -144,19 +145,11 @@ fn output(pair: Pair<Rule>) -> String {
                         parameters.push_str(&output(subpair));
                         parameters.push_str(", ");
                     },
-                    | Rule::type_name => {
-                        result.push_str("->");
-                        result.push_str(&output(subpair));
-                    },
                     | _ => {},
                 }
             }
             identifier.pop();
-            s.push_str(&identifier);
-            s.push_str("(");
-            s.push_str(&parameters);
-            s.push_str(")");
-            s.push_str(&result);
+            s = format!("{}({})", identifier, parameters);
             return s;
         },
 
@@ -170,15 +163,21 @@ fn output(pair: Pair<Rule>) -> String {
             s.push_str("]");
             return s;
         },
-        | Rule::fn_body => {
-            s.push_str("{");
+        | Rule::file => {
             for subpair in pair.into_inner() {
                 s.push_str(&output(subpair));
             }
-            s.push_str("}");
             return s;
         },
-        | Rule::file => {
+        | Rule::def_fn => {
+            s.push_str("fn ");
+            for subpair in pair.into_inner() {
+                s.push_str(&output(subpair));
+            }
+            return s;
+        },
+        | Rule::def_fn_main => {
+            s.push_str("fn main()");
             for subpair in pair.into_inner() {
                 s.push_str(&output(subpair));
             }
@@ -233,11 +232,19 @@ fn output(pair: Pair<Rule>) -> String {
             s.push_str("}");
             return s;
         },
+        | Rule::block_statement => {
+            s.push_str("{");
+            for subpair in pair.into_inner() {
+                s.push_str(&output(subpair));
+            }
+            s.push_str("}");
+            return s;
+        },
 
         // 具有固定数量子规则的规则, 用 inner_rules.next().unwrap() 解析.
-        | Rule::def_fn => {
+        | Rule::array_repeat => {
             let mut inner_rules = pair.into_inner();
-            s = format!("fn {} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            s = format!("[{}; {}]", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
             return s;
         },
         | Rule::else_branch => {
@@ -248,6 +255,16 @@ fn output(pair: Pair<Rule>) -> String {
         | Rule::else_if_branch => {
             let mut inner_rules = pair.into_inner();
             s = format!("else if {} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            return s;
+        },
+        | Rule::fn_type => {
+            let mut inner_rules = pair.into_inner();
+            s = format!("-> {}", output(inner_rules.next().unwrap()));
+            return s;
+        },
+        | Rule::function_call_statement => {
+            let mut inner_rules = pair.into_inner();
+            s = format!("{};", output(inner_rules.next().unwrap()));
             return s;
         },
         | Rule::if_branch => {
@@ -314,19 +331,13 @@ fn output(pair: Pair<Rule>) -> String {
             s = format!("_ => {}", output(inner_rules.next().unwrap()));
             return s;
         },
-        | Rule::type_expr => {
+        | Rule::block_return_expr => {
             let mut inner_rules = pair.into_inner();
-            s = format!("{}: {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            s = format!("return {};", output(inner_rules.next().unwrap()));
             return s;
         },
-        | Rule::function_call_statement => {
-            let mut inner_rules = pair.into_inner();
-            s = format!("{};", output(inner_rules.next().unwrap()));
-            return s;
-        },
-        | Rule::array_repeat => {
-            let mut inner_rules = pair.into_inner();
-            s = format!("[{}; {}]", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+        | Rule::block_return_statement => {
+            s.push_str("return ;");
             return s;
         },
         | Rule::sub_if_expr => {
@@ -352,6 +363,11 @@ fn output(pair: Pair<Rule>) -> String {
             s.push_str("\"");
             return s;
         },
+        | Rule::type_expr => {
+            let mut inner_rules = pair.into_inner();
+            s = format!("{}: {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            return s;
+        },
 
         // 直接对 pair.as_str() 处理的规则
         | Rule::measure_with_number | Rule::number_literal => {
@@ -371,11 +387,15 @@ fn output(pair: Pair<Rule>) -> String {
 
         // enmu类规则, 或者只有一条有效子规则的规则, 直接跳到 子规则
         | Rule::array_expr
+        | Rule::branch_expr
+        | Rule::block
         | Rule::brackt_expr
-        | Rule::expr_literal
         | Rule::expression
+        | Rule::fn_def_identifier
+        | Rule::literal_expr
         | Rule::loop_expr
         | Rule::match_expr
+        | Rule::module
         | Rule::statement
         | Rule::string_literal
         | Rule::type_name => {
