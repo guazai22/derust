@@ -163,10 +163,20 @@ fn output(pair: Pair<Rule>) -> String {
             s.push_str("]");
             return s;
         },
-        | Rule::file => {
+        | Rule::block_expr => {
+            s.push_str("{");
             for subpair in pair.into_inner() {
                 s.push_str(&output(subpair));
             }
+            s.push_str("}");
+            return s;
+        },
+        | Rule::block_statement => {
+            s.push_str("{");
+            for subpair in pair.into_inner() {
+                s.push_str(&output(subpair));
+            }
+            s.push_str("}");
             return s;
         },
         | Rule::def_fn => {
@@ -178,6 +188,12 @@ fn output(pair: Pair<Rule>) -> String {
         },
         | Rule::def_fn_main => {
             s.push_str("fn main()");
+            for subpair in pair.into_inner() {
+                s.push_str(&output(subpair));
+            }
+            return s;
+        },
+        | Rule::file => {
             for subpair in pair.into_inner() {
                 s.push_str(&output(subpair));
             }
@@ -206,6 +222,14 @@ fn output(pair: Pair<Rule>) -> String {
             s.push_str("|");
             return s;
         },
+        | Rule::let_statement => {
+            s.push_str("let ");
+            for subpair in pair.into_inner() {
+                s.push_str(&output(subpair));
+            }
+            s.push_str(";");
+            return s;
+        },
         | Rule::match_branches_expr => {
             s.push_str("{");
             for subpair in pair.into_inner() {
@@ -224,27 +248,16 @@ fn output(pair: Pair<Rule>) -> String {
             s.push_str(")");
             return s;
         },
-        | Rule::block_expr => {
-            s.push_str("{");
-            for subpair in pair.into_inner() {
-                s.push_str(&output(subpair));
-            }
-            s.push_str("}");
-            return s;
-        },
-        | Rule::block_statement => {
-            s.push_str("{");
-            for subpair in pair.into_inner() {
-                s.push_str(&output(subpair));
-            }
-            s.push_str("}");
-            return s;
-        },
 
         // 具有固定数量子规则的规则, 用 inner_rules.next().unwrap() 解析.
         | Rule::array_repeat => {
             let mut inner_rules = pair.into_inner();
             s = format!("[{}; {}]", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            return s;
+        },
+        | Rule::Assignment => {
+            let mut inner_rules = pair.into_inner();
+            s = format!("= {}", output(inner_rules.next().unwrap()));
             return s;
         },
         | Rule::else_branch => {

@@ -14,4 +14,6 @@ fn abc_def_g(i: k) -> i32 {
     print(a);
     return;
 }
-fn main() -> i32 {}
+fn main() -> i32 {
+    let a = 123;
+}

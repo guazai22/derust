@@ -29,12 +29,16 @@ block = { block_expr | block_statement }
     block_expr = { "{" ~ statement* ~ ( expression | block_return_expr ) ~ "}" }
         block_return_expr = { KEYWORD_return ~ DOT? ~ expression ~ ";"? }
         block_return_statement = { KEYWORD_return ~ DOT? ~ ";"? }
-        KEYWORD_return = _{ "return" }
 
 statement = { function_call_statement
-    /* | let_statement */
+    | let_statement
     // TODO
 }
+    function_call_statement = { function_call_expr ~ ";" }
+    // TODO: 赋值的时候, 前面的变量其实可以有多种形式的, 要加上这些变化.
+    let_statement = { KEYWORD_let ~ DOT? ~ ( type_expr | identifier ) ~ Assignment? ~ ";" }
+        Assignment = { "=" ~ expression }
+
 expression = {
       brackt_expr | tuple_expr
     | branch_expr | loop_expr
@@ -74,6 +78,34 @@ expression = {
     brackt_expr = { "(" ~ expression ~ ")" }
     tuple_expr  = { "(" ~ ","? ~ expression ~ ("," ~ expression)+ ~ ","? ~")" }
 
+    branch_expr = { match_expr | if_expr }
+        if_expr = { if_expr_rust | if_expr_derust }
+            if_expr_rust = { sub_if_expr ~ sub_else_if_expr* ~ sub_else_expr? }
+                sub_if_expr = { KEYWORD_if ~ DOT? ~ expression ~ block_expr }
+                sub_else_if_expr = { KEYWORD_else_if ~ DOT? ~ expression ~ block_expr }
+                sub_else_expr = { KEYWORD_else ~ block_expr }
+            if_expr_derust = { KEYWORD_if ~ "{" ~ MARK_branch? ~ if_branch ~ ( MARK_branch ~ else_if_branch )*
+                ~ ( MARK_branch? ~ "}" ~ else_branch | MARK_branch? ~ "}" | ( MARK_branch ~ else_branch )? ~ "}" ) }
+                if_branch = { expression ~ block_expr }
+                else_if_branch = { expression ~ block_expr }
+                else_branch = { KEYWORD_else ~ block_expr }
+            // TODO when表达式
+            /* if_expr_when = { expression ~ DOT ~ KEYWORD_when ~ DOT? ~ expression */
+            /*     ~ ( DOT ~ KEYWORD_else ~ ( expression | block_expr ) )? }        */
+        match_expr = { match_expr_rust | match_expr_derust }
+            match_expr_rust = { KEYWORD_match ~ DOT? ~ expression ~ match_branches_expr }
+            match_expr_derust = { KEYWORD_if ~ DOT?
+                ~ ( "(" ~ expression ~ ")" ~ DOT? | expression ~ DOT )
+                ~ KEYWORD_is ~ match_branches_expr }
+                match_branches_expr = { "{" ~ MARK_branch? ~ match_branch_expr ~ ( MARK_branch ~ match_branch_expr )*
+                    ~ ( MARK_branch? ~ "}" ~ match_branch_else_expr?
+                        | MARK_branch ~ ( match_branch_else_expr | underline_branch ) ~ "}" )
+                        | match_branch_expr ~ match_branch_else_expr? }
+                    // TODO: match 的参数, 是不是有限制.
+                match_branch_expr = { expression ~ block_expr }
+                underline_branch = { "_" ~ block_expr }
+                match_branch_else_expr = { KEYWORD_else ~ block_expr }
+
     loop_expr = { loop_for_expr | loop_while_expr | loop_times_expr }
         loop_for_expr = { KEYWORD_loop_for ~ DOT?
             ~ ( "(" ~identifier ~ ")" ~ DOT? | identifier ~ DOT ) ~ KEYWORD_in ~ DOT? ~ expression ~ block_expr }
@@ -81,11 +113,6 @@ expression = {
         loop_times_expr = { KEYWORD_loop ~ DOT?
             ~ ( ( "(" ~ expression ~ ")" ~ DOT? | expression ~ DOT ) ~ KEYWORD_times)?
             ~ block_expr }
-            KEYWORD_loop_for = _{ "loop"? ~ "for" }
-            KEYWORD_in = _{ "in" }
-            KEYWORD_loop = _{ "loop" }
-            KEYWORD_times = _{ "times" | "time" }
-            KEYWORD_loop_while = _{ "loop"? ~ "while" }
 
     function_call_expr = {
           ( identifier
@@ -116,68 +143,31 @@ expression = {
             number_with_underline = @{ ( NUMBER+ ~ "_"{1, 3} )+ ~ (NUMBER+)?
                 | ( "_"{1, 3} ~ NUMBER+ )+ ~ "_"{, 3} }
             number_with_space =     @{ NUMBER+ ~ (" "{1, 3} ~ NUMBER+)+ }
+            number_pure = @{ NUMBER+ }
         measure_with_number = ${ number_literal ~ " "{,3} ~ LETTER+ }
+
     array_expr = { array_repeat | array_some | array_none }
-    branch_expr = { match_expr | if_expr }
-        if_expr = { if_expr_rust | if_expr_derust }
-                KEYWORD_if = _{ "if" }
-                KEYWORD_else_if = _{ "else" ~ "if" }
-                KEYWORD_else = _{ "else" }
-                KEYWORD_when = _{ "when" }
-                MARK_branch = _{ "," | "|" }
-            if_expr_rust = { sub_if_expr ~ sub_else_if_expr* ~ sub_else_expr? }
-                sub_if_expr = { KEYWORD_if ~ DOT? ~ expression ~ block_expr }
-                sub_else_if_expr = { KEYWORD_else_if ~ DOT? ~ expression ~ block_expr }
-                sub_else_expr = { KEYWORD_else ~ block_expr }
-            if_expr_derust = { KEYWORD_if ~ "{" ~ MARK_branch? ~ if_branch ~ ( MARK_branch ~ else_if_branch )*
-                ~ ( MARK_branch? ~ "}" ~ else_branch | MARK_branch? ~ "}" | ( MARK_branch ~ else_branch )? ~ "}" ) }
-                if_branch = { expression ~ block_expr }
-                else_if_branch = { expression ~ block_expr }
-                else_branch = { KEYWORD_else ~ block_expr }
-            // TODO when表达式
-            /* if_expr_when = { expression ~ DOT ~ KEYWORD_when ~ DOT? ~ expression */
-            /*     ~ ( DOT ~ KEYWORD_else ~ ( expression | block_expr ) )? }        */
-        match_expr = { match_expr_rust | match_expr_derust }
-            match_expr_rust = { KEYWORD_match ~ DOT? ~ expression ~ match_branches_expr }
-            match_expr_derust = { KEYWORD_if ~ DOT?
-                ~ ( "(" ~ expression ~ ")" ~ DOT? | expression ~ DOT )
-                ~ KEYWORD_is ~ match_branches_expr }
-                match_branches_expr = { "{" ~ MARK_branch? ~ match_branch_expr ~ ( MARK_branch ~ match_branch_expr )*
-                    ~ ( MARK_branch? ~ "}" ~ match_branch_else_expr?
-                        | MARK_branch ~ ( match_branch_else_expr | underline_branch ) ~ "}" )
-                        | match_branch_expr ~ match_branch_else_expr? }
-                    // TODO: match 的参数, 是不是有限制.
-                match_branch_expr = { expression ~ block_expr }
-                underline_branch = { "_" ~ block_expr }
-                match_branch_else_expr = { KEYWORD_else ~ block_expr }
-                KEYWORD_match = _{ "match" }
-                KEYWORD_is = _{ "is" }
+        array_none = { "[" ~ "]" }
+        array_some = { "[" ~ ","? ~ expression ~ ("," ~ expression)* ~ ","? ~ "]" }
+        array_repeat = { "[" ~ expression ~ ";" ~ number_literal ~ "]" }
 
+    type_expr = { identifier ~ ":" ~ type_name }
+    lambda_expr = { KEYWORD_lambda_start ~ lambda_head ~ block_expr }
+        lambda_head = { "(" ~ (type_expr ~ ","?)* ~ ")" }
 
+comment = _{ block_comment | line_comment }
+    line_comment = _{ ("//" ~ !("/" | "!") ~ (!NEWLINE ~ ANY)*) }
+    block_comment = _{ "/*" ~ (block_comment | !"*/" ~ ANY)* ~ "*/" }
 
-//  直接返回 pair.as_str() 的规则
+identifier = ${ !( KEYWORD | ("_"* ~ NUMBER) ) ~ identifier_atomic ~ ( " " ~ identifier_atomic )*
+    | "(" ~ identifier ~ ")" }
+// TODO: 这个 rule 运行的时候并不如设想的那样是 silent, 可能有bug
+// 添加unicode字符
+    identifier_atomic = ${ ( "_"* ~ (LETTER | NUMBER)+ ~ "_"* )+ }
+
+DOT = _{ "." }
 WHITESPACE   = _{ " " | "\t" | NEWLINE | comment}
-array_none = { "[" ~ "]" }
 
-
-
-function_call_statement = { function_call_expr ~ ";" }
-type_expr               = { identifier ~ ":" ~ type_name }
-array_repeat = { "[" ~ expression ~ ";" ~ number_literal ~ "]" }
-lambda_expr = { KEYWORD_lambda_start ~ lambda_head ~ block_expr }
-
-// 具有不固定数量同样子规则的规则, 用 for subpair in pair.into_inner() 解析
-array_some = { "[" ~ ","? ~ expression ~ ("," ~ expression)* ~ ","? ~ "]" }
-lambda_head = { "(" ~ (type_expr ~ ","?)* ~ ")" }
-
-// silent
-KEYWORD_lambda_start = _{ "fn" }
-DOT                  = _{ "." }
-line_comment         = _{ ("//" ~ !("/" | "!") ~ (!NEWLINE ~ ANY)*) }
-block_comment        = _{ "/*" ~ (block_comment | !"*/" ~ ANY)* ~ "*/" }
-comment              = _{ block_comment | line_comment }
-
-// 原子规则
 KEYWORD = @{
         "abstract" | "as" | "become" | "break" | "byte" | "class" | "clear" |
         "const" | "continue" | "do" | "else" | "enum" | "eval" | "export" |
@@ -188,13 +178,19 @@ KEYWORD = @{
         "use" | "where" | "while" | "yield"
 }
 
+KEYWORD_else_if = _{ "else" ~ "if" }
+KEYWORD_else = _{ "else" }
+KEYWORD_if = _{ "if" }
+KEYWORD_is = _{ "is" }
+KEYWORD_in = _{ "in" }
+KEYWORD_lambda_start = _{ "fn" }
+KEYWORD_let = _{ "let" ~ "mut"? }
+KEYWORD_loop = _{ "loop" }
+KEYWORD_loop_for = _{ "loop"? ~ "for" }
+KEYWORD_loop_while = _{ "loop"? ~ "while" }
+KEYWORD_match = _{ "match" }
+KEYWORD_return = _{ "return" }
+KEYWORD_times = _{ "times" | "time" }
+KEYWORD_when = _{ "when" }
 
-// 变量不能以数字或者下划线+数字开头
-identifier = ${ !( KEYWORD | ("_"* ~ NUMBER) ) ~ identifier_atomic ~ ( " " ~ identifier_atomic )*
-    | "(" ~ identifier ~ ")" }
-brackt_identifier = { "(" ~ ","? ~ identifier ~ ")" }
-// TODO: 这个 rule 运行的时候并不如设想的那样是 silent, 可能有bug
-// 添加unicode字符
-identifier_atomic = ${ ( "_"* ~ (LETTER | NUMBER)+ ~ "_"* )+ }
-
-number_pure = @{ NUMBER+ }
+MARK_branch = _{ "," | "|" }
