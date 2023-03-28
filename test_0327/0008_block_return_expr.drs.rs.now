@@ -5,7 +5,7 @@ fn f() {
         },
         loop {
             println(a);
-            return a;
+            return.a;
         },
         loop {
             println(a);

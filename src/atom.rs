@@ -13,8 +13,16 @@ use super::*;
 //     let _ = b"e";
 //     let _ = br"f";
 // }
-pub(crate) const LITERAL_FIRST: TokenSet =
-    TokenSet::new(&[T![true], T![false], INT_NUMBER, FLOAT_NUMBER, BYTE, CHAR, STRING, BYTE_STRING]);
+pub(crate) const LITERAL_FIRST: TokenSet = TokenSet::new(&[
+    T![true],
+    T![false],
+    INT_NUMBER,
+    FLOAT_NUMBER,
+    BYTE,
+    CHAR,
+    STRING,
+    BYTE_STRING,
+]);
 
 pub(crate) fn literal(p: &mut Parser<'_>) -> Option<CompletedMarker> {
     if !p.at_ts(LITERAL_FIRST) {
@@ -26,35 +34,38 @@ pub(crate) fn literal(p: &mut Parser<'_>) -> Option<CompletedMarker> {
 }
 
 // E.g. for after the break in `if break {}`, this should not match
-pub(super) const ATOM_EXPR_FIRST: TokenSet = LITERAL_FIRST.union(paths::PATH_FIRST).union(TokenSet::new(&[
-    T!['('],
-    T!['{'],
-    T!['['],
-    T![|],
-    T![async],
-    T![box],
-    T![break],
-    T![const],
-    T![continue],
-    T![do],
-    T![for],
-    T![if],
-    T![let],
-    T![loop],
-    T![match],
-    T![move],
-    T![return],
-    T![static],
-    T![try],
-    T![unsafe],
-    T![while],
-    T![yield],
-    LIFETIME_IDENT,
-]));
+pub(super) const ATOM_EXPR_FIRST: TokenSet =
+    LITERAL_FIRST.union(paths::PATH_FIRST).union(TokenSet::new(&[
+        T!['('],
+        T!['{'],
+        T!['['],
+        T![|],
+        T![async],
+        T![box],
+        T![break],
+        T![const],
+        T![continue],
+        T![do],
+        T![for],
+        T![if],
+        T![let],
+        T![loop],
+        T![match],
+        T![move],
+        T![return],
+        T![static],
+        T![try],
+        T![unsafe],
+        T![while],
+        T![yield],
+        LIFETIME_IDENT,
+    ]));
 
 pub(super) const EXPR_RECOVERY_SET: TokenSet = TokenSet::new(&[T![')'], T![']']]);
 
-pub(super) fn atom_expr(p: &mut Parser<'_>, r: Restrictions) -> Option<(CompletedMarker, BlockLike)> {
+pub(super) fn atom_expr(
+    p: &mut Parser<'_>, r: Restrictions,
+) -> Option<(CompletedMarker, BlockLike)> {
     if let Some(m) = literal(p) {
         return Some((m, BlockLike::NotBlock));
     }

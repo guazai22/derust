@@ -4,19 +4,40 @@ fn abc (m:n) def (i:k) g () -> i32 {
     return abc;
 }
 
-fn abc (m:n) def (i:k) g () -> i32 {
-    print(a);
-    return;
-}
-fn abc (m:n) def (i:k) g  -> i32 {
-    print(a);
-    return;
-}
-fn abc def (i:k) g  -> i32 {
-    print(a);
-    return;
+fn main () -> i32 {
+     (
+        , loop. 5 .times { 123 }
+        , mark a .loop 5 .times { 123 }
+        , mark a .loop (top 5) .times { 123 }
+        , for i .in iter { 123 }
+        , for (i) .in iter abc () { 123 }
+        , mark a .for (i) .in (iter) { 523 }
+        , mark b .loop { 123 }
+        , while true { 123 }
+        , mark c .while true { 123 }
+     )
 }
 
-fn main () -> i32 {
-    let a = 123;
+fn f () {
+    (
+        , if x { x } else if y { y } else if y { y } else { z }
+        , if { x { x } y { y } z { z } }
+        , if {
+            , x { x }
+            , y { y }
+            , z { z }
+        }
+    )
+}
+
+fn f () {
+    (
+        , if x .is { a { print(); a } b { b } c { c } _ { d } }
+        , if x .is {
+            , a { print(); a }
+            , b { b }
+            , c { c }
+            , _ { d }
+        }
+    )
 }

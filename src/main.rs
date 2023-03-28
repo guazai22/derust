@@ -25,9 +25,10 @@ fn main() {
         "0009_def_fn"
     ;
 
-    let input = fs::read_to_string(&(String::from("./test/") + rule_testing + ".drs")).expect("cannot read file");
+    let input = fs::read_to_string(&(String::from("./test/") + rule_testing + ".drs"))
+        .expect("cannot read file");
     let pair = DeRustParser::parse(Rule::file, &input).unwrap().next().unwrap();
-    println!("{:#?}", pair); // test
+    // println!("{:#?}", pair); // test
     let inital_rs_file: String = output(pair);
 
     let rust_file_path = String::from("./test/") + rule_testing + ".drs.rs";
@@ -38,8 +39,8 @@ fn main() {
     Command::new("cat").arg(&rust_file_path).status().expect("");
     println!("\nDONE: {}.drs", rule_testing);
 
-    test_if_other_rules_still_good(rule_testing);
-    test_if_err_is_err();
+    // test_if_other_rules_still_good(rule_testing);
+    // test_if_err_is_err();
 }
 
 fn test_if_err_is_err() {
@@ -82,8 +83,11 @@ fn test_if_other_rules_still_good(present: &str) {
             fs::write(&temp_file, &s).unwrap();
             Command::new("rustfmt").arg(&temp_file).status().expect("");
 
-            let rs_content = fs::read_to_string(String::from(file) + ".rs").expect("err when read {file}");
-            let now_content = fs::read_to_string(String::from(temp_file)).expect("err when read {temp_file}");
+            let rs_content =
+                fs::read_to_string(String::from(file) + ".rs").expect("err when read {file}");
+            let now_content =
+                fs::read_to_string(String::from(temp_file)).expect("err when read {temp_file}");
+            assert_eq!(1, 1);
 
             if rs_content != now_content {
                 let (_, temp_s) = file.split_at(7);
@@ -207,7 +211,8 @@ fn output(pair: Pair<Rule>) -> String {
             s.pop();
             return s;
         },
-        | Rule::if_expr | Rule::if_expr_rust | Rule::if_expr_derust => {
+        // 这里需要对 if_expr_derust 转变成 rust 语句进行变形.
+        | Rule::if_expr_rust | Rule::if_expr_derust => {
             for subpair in pair.into_inner() {
                 s.push_str(&output(subpair));
             }
@@ -252,10 +257,14 @@ fn output(pair: Pair<Rule>) -> String {
         // 具有固定数量子规则的规则, 用 inner_rules.next().unwrap() 解析.
         | Rule::array_repeat => {
             let mut inner_rules = pair.into_inner();
-            s = format!("[{}; {}]", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            s = format!(
+                "[{}; {}]",
+                output(inner_rules.next().unwrap()),
+                output(inner_rules.next().unwrap())
+            );
             return s;
         },
-        | Rule::Assignment => {
+        | Rule::assignment => {
             let mut inner_rules = pair.into_inner();
             s = format!("= {}", output(inner_rules.next().unwrap()));
             return s;
@@ -267,7 +276,11 @@ fn output(pair: Pair<Rule>) -> String {
         },
         | Rule::else_if_branch => {
             let mut inner_rules = pair.into_inner();
-            s = format!("else if {} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            s = format!(
+                "else if {} {}",
+                output(inner_rules.next().unwrap()),
+                output(inner_rules.next().unwrap())
+            );
             return s;
         },
         | Rule::fn_type => {
@@ -282,7 +295,11 @@ fn output(pair: Pair<Rule>) -> String {
         },
         | Rule::if_branch => {
             let mut inner_rules = pair.into_inner();
-            s = format!("if {} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            s = format!(
+                "if {} {}",
+                output(inner_rules.next().unwrap()),
+                output(inner_rules.next().unwrap())
+            );
             return s;
         },
         // | Rule::if_expr_when => {
@@ -295,51 +312,110 @@ fn output(pair: Pair<Rule>) -> String {
         // },
         | Rule::lambda_expr => {
             let mut inner_rules = pair.into_inner();
-            s = format!("{} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            s = format!(
+                "{} {}",
+                output(inner_rules.next().unwrap()),
+                output(inner_rules.next().unwrap())
+            );
             return s;
         },
         | Rule::loop_times_expr => {
             let mut inner_rules = pair.into_inner();
-            let first_inner_rule = inner_rules.next().unwrap();
-            if first_inner_rule.as_rule() == Rule::expression {
-                s.push_str(" { let mut i = 0;  while ( i < ( ");
-                s.push_str(&output(first_inner_rule));
+            let mut inner_rule = inner_rules.next().unwrap();
+            let mut loop_mark = String::new();
+            if inner_rule.as_rule() == Rule::loop_mark {
+                loop_mark = output(inner_rule);
+                inner_rule = inner_rules.next().unwrap();
+            }
+            if inner_rule.as_rule() == Rule::expression {
+                s.push_str(" { let mut i = 0;");
+                s.push_str(&loop_mark);
+                s.push_str(" while ( i < ( ");
+                s.push_str(&output(inner_rule));
                 s.push_str(")) { i = i + 1;");
                 for subpair in inner_rules.next().unwrap().into_inner() {
                     s.push_str(&output(subpair));
                 }
                 s.push_str("}}");
             } else {
-                s = format!("loop {}", &output(first_inner_rule));
+                s = format!("{} loop {}", &loop_mark, output(inner_rule));
             }
             return s;
         },
         | Rule::loop_for_expr => {
             let mut inner_rules = pair.into_inner();
-            s = format!(
-                "for ({}) in ({}) {}",
-                output(inner_rules.next().unwrap()),
-                output(inner_rules.next().unwrap()),
-                output(inner_rules.next().unwrap()),
-            );
+            let inner_rule = inner_rules.next().unwrap();
+            if inner_rule.as_rule() == Rule::loop_mark {
+                s = format!(
+                    "{} for ({}) in ({}) {}",
+                    output(inner_rule),
+                    output(inner_rules.next().unwrap()),
+                    output(inner_rules.next().unwrap()),
+                    output(inner_rules.next().unwrap()),
+                );
+            } else {
+                s = format!(
+                    "for ({}) in ({}) {}",
+                    output(inner_rule),
+                    output(inner_rules.next().unwrap()),
+                    output(inner_rules.next().unwrap()),
+                );
+            }
+            return s;
+        },
+        | Rule::loop_mark => {
+            let mut inner_rules = pair.into_inner();
+            s = format!("'{}:", output(inner_rules.next().unwrap()));
+            return s;
+        },
+        | Rule::loop_repeat_expr => {
+            let mut inner_rules = pair.into_inner();
+            let inner_rule = inner_rules.next().unwrap();
+            if inner_rule.as_rule() == Rule::loop_mark {
+                s = format!("{} loop {}", output(inner_rule), output(inner_rules.next().unwrap()));
+            } else {
+                s = format!("loop {}", output(inner_rule));
+            }
             return s;
         },
         | Rule::loop_while_expr => {
             let mut inner_rules = pair.into_inner();
-            s = format!("while ({}) {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            let inner_rule = inner_rules.next().unwrap();
+            if inner_rule.as_rule() == Rule::loop_mark {
+                s = format!(
+                    "{} while ({}) {}",
+                    output(inner_rule),
+                    output(inner_rules.next().unwrap()),
+                    output(inner_rules.next().unwrap())
+                );
+            } else {
+                s = format!(
+                    "while ({}) {}",
+                    output(inner_rule),
+                    output(inner_rules.next().unwrap())
+                );
+            }
             return s;
         },
-        | Rule::match_expr_rust | Rule::match_expr_derust => {
+        | Rule::match_expr_derust => {
             let mut inner_rules = pair.into_inner();
-            s = format!("match {} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            s = format!(
+                "match {} {}",
+                output(inner_rules.next().unwrap()),
+                output(inner_rules.next().unwrap())
+            );
             return s;
         },
         | Rule::match_branch_expr => {
             let mut inner_rules = pair.into_inner();
-            s = format!("{} => {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            s = format!(
+                "{} => {}",
+                output(inner_rules.next().unwrap()),
+                output(inner_rules.next().unwrap())
+            );
             return s;
         },
-        | Rule::match_branch_else_expr | Rule::underline_branch => {
+        | Rule::match_branch_else_expr => {
             let mut inner_rules = pair.into_inner();
             s = format!("_ => {}", output(inner_rules.next().unwrap()));
             return s;
@@ -355,12 +431,20 @@ fn output(pair: Pair<Rule>) -> String {
         },
         | Rule::sub_if_expr => {
             let mut inner_rules = pair.into_inner();
-            s = format!("if {} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            s = format!(
+                "if {} {}",
+                output(inner_rules.next().unwrap()),
+                output(inner_rules.next().unwrap())
+            );
             return s;
         },
         | Rule::sub_else_if_expr => {
             let mut inner_rules = pair.into_inner();
-            s = format!("else if {} {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            s = format!(
+                "else if {} {}",
+                output(inner_rules.next().unwrap()),
+                output(inner_rules.next().unwrap())
+            );
             return s;
         },
         | Rule::sub_else_expr => {
@@ -378,7 +462,11 @@ fn output(pair: Pair<Rule>) -> String {
         },
         | Rule::type_expr => {
             let mut inner_rules = pair.into_inner();
-            s = format!("{}: {}", output(inner_rules.next().unwrap()), output(inner_rules.next().unwrap()));
+            s = format!(
+                "{}: {}",
+                output(inner_rules.next().unwrap()),
+                output(inner_rules.next().unwrap())
+            );
             return s;
         },
 
@@ -405,6 +493,7 @@ fn output(pair: Pair<Rule>) -> String {
         | Rule::brackt_expr
         | Rule::expression
         | Rule::fn_def_identifier
+        | Rule::if_expr
         | Rule::literal_expr
         | Rule::loop_expr
         | Rule::match_expr

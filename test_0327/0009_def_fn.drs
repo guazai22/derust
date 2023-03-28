@@ -1,0 +1,38 @@
+// 标准格式
+fn abc (m:n) def (i:k) g () -> i32 {
+    print(a);
+    return abc;
+}
+
+fn abc (m:n) def (i:k) g () -> i32 {
+    print(a);
+    return;
+}
+fn abc (m:n) def (i:k) g  -> i32 {
+    print(a);
+    return;
+}
+fn abc def (i:k) g  -> i32 {
+    print(a);
+    return;
+}
+
+fn main () -> i32 {
+     (
+        loop 5 .times { 123 },
+        mark a: loop 5 .times { 123 },
+        mark a: loop (5) times { 123 },
+        for i .in iter { 123 },
+        mark a: for i .in iter { 123 },
+        mark b: loop { 123 },
+        while true { 123 },
+        mark c: while true { 123 }
+     )
+}
+
+fn f () {
+    (
+        , if x { x } else if y { y } else { z }
+
+    )
+}
