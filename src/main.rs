@@ -44,8 +44,8 @@ fn main() {
 }
 
 fn test_if_err_is_err() {
-    let mut mark = false;
-    for entry in fs::read_dir("./test").unwrap() {
+    let mut mark: bool = false;
+    fs::read_dir("./test").unwrap().for_each(|entry| {
         let path = entry.unwrap().path();
         let path = path.to_str().unwrap();
         if path.ends_with(".err") {
@@ -63,7 +63,7 @@ fn test_if_err_is_err() {
                 }
             }
         }
-    }
+    });
 }
 
 fn test_if_other_rules_still_good(present: &str) {
@@ -167,15 +167,7 @@ fn output(pair: Pair<Rule>) -> String {
             s.push_str("]");
             return s;
         },
-        | Rule::block_expr => {
-            s.push_str("{");
-            for subpair in pair.into_inner() {
-                s.push_str(&output(subpair));
-            }
-            s.push_str("}");
-            return s;
-        },
-        | Rule::block_statement => {
+        | Rule::block => {
             s.push_str("{");
             for subpair in pair.into_inner() {
                 s.push_str(&output(subpair));
@@ -420,15 +412,6 @@ fn output(pair: Pair<Rule>) -> String {
             s = format!("_ => {}", output(inner_rules.next().unwrap()));
             return s;
         },
-        | Rule::block_return_expr => {
-            let mut inner_rules = pair.into_inner();
-            s = format!("return {};", output(inner_rules.next().unwrap()));
-            return s;
-        },
-        | Rule::block_return_statement => {
-            s.push_str("return ;");
-            return s;
-        },
         | Rule::sub_if_expr => {
             let mut inner_rules = pair.into_inner();
             s = format!(
@@ -489,7 +472,6 @@ fn output(pair: Pair<Rule>) -> String {
         // enmu类规则, 或者只有一条有效子规则的规则, 直接跳到 子规则
         | Rule::array_expr
         | Rule::branch_expr
-        | Rule::block
         | Rule::brackt_expr
         | Rule::expression
         | Rule::fn_def_identifier

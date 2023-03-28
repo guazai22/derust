@@ -23,20 +23,19 @@ def_fn = { KEYWORD_def_fn_start ~ DOT? ~ fn_def_identifier ~ fn_type? ~ block }
             // TODO: type tuple_type or_type ...
         }
 
-block = { block_expr | block_statement }
-    block_statement = { "{" ~ statement* ~ block_return_statement? ~ "}" }
-    block_expr = { "{" ~ statement* ~ ( expression | block_return_expr ) ~ "}" }
-        block_return_expr = { KEYWORD_return ~ DOT? ~ expression ~ ";"? }
-        block_return_statement = { KEYWORD_return ~ DOT? ~ ";"? }
+block = { "{" ~ statement* ~ "}" }
 
 statement = { function_call_statement
     | let_statement
+    | return_statement
+    /* | if_statement */
     // TODO
 }
     function_call_statement = { function_call_expr ~ ";" }
     // TODO: 赋值的时候, 前面的变量其实可以有多种形式的, 要加上这些变化.
     let_statement = { KEYWORD_let ~ DOT? ~ ( type_expr | identifier ) ~ assignment? ~ ";" }
         assignment = { "=" ~ expression }
+    return_statement = { KEYWORD_return ~ DOT? ~ expression ~ ";" }
 
 expression = {
      brackt_expr | tuple_expr
@@ -50,9 +49,8 @@ expression = {
     /* | unary_expr // 一元操作         */
     /* | cast_expr  // foo as f64           */
     /* | let_expr                           */
-    /* | block_expr // 同上               */
     /* | async await                        */
-    /* | try_block_expr                     */
+    /* | try_block                     */
     /* | assign                             */
     /* | assign_op // a += 1                */
     /* | field_expr // obj.foo obj.0        */
@@ -80,32 +78,32 @@ expression = {
     branch_expr = { match_expr | if_expr }
         if_expr = { if_expr_rust | if_expr_derust }
             if_expr_rust = { sub_if_expr ~ sub_else_if_expr* ~ sub_else_expr? }
-                sub_if_expr = { KEYWORD_if ~ DOT? ~ expression ~ block_expr }
-                sub_else_if_expr = { KEYWORD_else_if ~ DOT? ~ expression ~ block_expr }
-                sub_else_expr = { KEYWORD_else ~ block_expr }
+                sub_if_expr = { KEYWORD_if ~ DOT? ~ expression ~ block }
+                sub_else_if_expr = { KEYWORD_else_if ~ DOT? ~ expression ~ block }
+                sub_else_expr = { KEYWORD_else ~ block }
             if_expr_derust = { KEYWORD_if ~ "{" ~ if_branch ~ else_if_branch* ~ else_branch? ~ MARK_branch? ~ "}" }
-                if_branch = { MARK_branch? ~ expression ~ block_expr }
-                else_if_branch = { MARK_branch? ~ expression ~ block_expr }
-                else_branch = { MARK_branch? ~ KEYWORD_else ~ block_expr }
+                if_branch = { MARK_branch? ~ expression ~ block }
+                else_if_branch = { MARK_branch? ~ expression ~ block }
+                else_branch = { MARK_branch? ~ KEYWORD_else ~ block }
             // TODO when表达式
             /* if_expr_when = { expression ~ DOT ~ KEYWORD_when ~ DOT? ~ expression */
-            /*     ~ ( DOT ~ KEYWORD_else ~ ( expression | block_expr ) )? }        */
+            /*     ~ ( DOT ~ KEYWORD_else ~ ( expression | block ) )? }        */
         // TODO: 语法糖: if something .is something {} else {}
         //               let something = something .when something .is some .else {}
         match_expr = { match_expr_derust }
             match_expr_derust = { KEYWORD_if ~ DOT? ~ expression ~ DOT ~ KEYWORD_is ~ match_branches_expr }
                 match_branches_expr = { "{" ~ match_branch_expr+ ~ match_branch_else_expr? ~ MARK_branch? ~ "}" }
                     // TODO: match 的参数, 是不是有限制.
-                match_branch_expr = { MARK_branch? ~ expression ~ block_expr }
-                match_branch_else_expr = { MARK_branch? ~ ( KEYWORD_else | "_" ) ~ block_expr }
+                match_branch_expr = { MARK_branch? ~ expression ~ block }
+                match_branch_else_expr = { MARK_branch? ~ ( KEYWORD_else | "_" ) ~ block }
 
     loop_expr = { loop_for_expr | loop_while_expr | loop_times_expr | loop_repeat_expr }
         loop_for_expr = { loop_mark? ~ KEYWORD_loop_for ~ DOT?
-            ~ ( identifier ~ DOT ) ~ KEYWORD_in ~ DOT? ~ expression ~ block_expr }
-        loop_while_expr = { loop_mark? ~ KEYWORD_loop_while ~ DOT? ~ expression ~ block_expr }
+            ~ ( identifier ~ DOT ) ~ KEYWORD_in ~ DOT? ~ expression ~ block }
+        loop_while_expr = { loop_mark? ~ KEYWORD_loop_while ~ DOT? ~ expression ~ block }
         loop_times_expr = { loop_mark? ~ KEYWORD_loop ~ DOT?
-            ~ ( expression ) ~ DOT ~ KEYWORD_times ~ block_expr }
-        loop_repeat_expr = { loop_mark? ~ KEYWORD_loop ~ block_expr }
+            ~ ( expression ) ~ DOT ~ KEYWORD_times ~ block }
+        loop_repeat_expr = { loop_mark? ~ KEYWORD_loop ~ block }
             loop_mark = { KEYWORD_loop_mark ~ identifier ~ DOT }
 
     function_call_expr = {
@@ -146,7 +144,7 @@ expression = {
         array_repeat = { "[" ~ expression ~ ";" ~ number_literal ~ "]" }
 
     type_expr = { identifier ~ ":" ~ type_name }
-    lambda_expr = { KEYWORD_lambda_start ~ DOT? ~ lambda_head ~ block_expr }
+    lambda_expr = { KEYWORD_lambda_start ~ DOT? ~ lambda_head ~ block }
         lambda_head = { "(" ~ (type_expr ~ ","?)* ~ ")" }
 
 comment = _{ block_comment | line_comment }
