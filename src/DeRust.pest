@@ -23,11 +23,44 @@ def_fn = { KEYWORD_def_fn_start ~ DOT? ~ fn_def_identifier ~ fn_type? ~ block }
             // TODO: type tuple_type or_type ...
         }
 
-block = { "{" ~ statement* ~ "}" }
+block = { "{" ~ statement* ~ expression? ~ "}" }
+
+branch_block = { match_block | if_block }
+    if_block = { rust_if_block | derust_if_block }
+        rust_if_block = { sub_if_block ~ sub_else_if_block* ~ sub_else_block? }
+            sub_if_block = { KEYWORD_if ~ DOT? ~ expression ~ block }
+            sub_else_if_block = { KEYWORD_else_if ~ DOT? ~ expression ~ block }
+            sub_else_block = { KEYWORD_else ~ block }
+        // 这里这样写是为了解析成rust的时候更方便.
+        derust_if_block = { KEYWORD_if ~ "{" ~ if_branch ~ else_if_branch* ~ else_branch? ~ MARK_branch? ~ "}" }
+            if_branch = { MARK_branch? ~ expression ~ block }
+            else_if_branch = { MARK_branch? ~ expression ~ block }
+            else_branch = { MARK_branch? ~ KEYWORD_else ~ block }
+        // TODO when表达式
+        /* if_expr_when = { expression ~ DOT ~ KEYWORD_when ~ DOT? ~ expression */
+        /*     ~ ( DOT ~ KEYWORD_else ~ ( expression | block ) )? }        */
+    // TODO: 语法糖: if something .is something {} else {}
+    //               let something = something .when something .is some .else {}
+    match_block = { KEYWORD_if ~ DOT? ~ expression ~ DOT ~ KEYWORD_is ~ match_branches }
+        match_branches = { "{" ~ match_branch+ ~ match_else_branch? ~ MARK_branch? ~ "}" }
+        // TODO: match 的参数, 是不是有限制. pattern?
+        match_branch = { MARK_branch? ~ expression ~ block }
+        match_else_branch = { MARK_branch? ~ ( KEYWORD_else | "_" ) ~ block }
+
+loop_block = { loop_for_block | loop_while_block | loop_times_block | loop_repeat_block }
+    // TODO: pattern?
+    loop_for_block = { loop_mark? ~ KEYWORD_loop_for ~ DOT?
+        ~ ( identifier ~ DOT ) ~ KEYWORD_in ~ DOT? ~ expression ~ block }
+    loop_while_block = { loop_mark? ~ KEYWORD_loop_while ~ DOT? ~ expression ~ block }
+    loop_times_block = { loop_mark? ~ KEYWORD_loop ~ DOT? ~ expression ~ DOT ~ KEYWORD_times ~ block }
+    loop_repeat_block = { loop_mark? ~ KEYWORD_loop ~ block }
+        loop_mark = { KEYWORD_loop_mark ~ identifier ~ DOT }
 
 statement = { function_call_statement
     | let_statement
     | return_statement
+    | branch_block
+    | loop_block
     /* | if_statement */
     // TODO
 }
@@ -38,12 +71,11 @@ statement = { function_call_statement
     return_statement = { KEYWORD_return ~ DOT? ~ expression ~ ";" }
 
 expression = {
-     brackt_expr | tuple_expr
-    | branch_expr | loop_expr
-    | array_expr
+      brackt_expr       | tuple_expr        | array_expr
+    /* | if_block          | loop_block */
     | lambda_expr
     | function_call_expr
-    | literal_expr | identifier
+    | literal_expr      | identifier
     /* | method_call_expr                   */
     /* | binary_expr                        */
     /* | unary_expr // 一元操作         */
@@ -74,37 +106,6 @@ expression = {
 }
     brackt_expr = { "(" ~ expression ~ ")" }
     tuple_expr  = { "(" ~ ","? ~ expression ~ ("," ~ expression)+ ~ ","? ~")" }
-
-    branch_expr = { match_expr | if_expr }
-        if_expr = { if_expr_rust | if_expr_derust }
-            if_expr_rust = { sub_if_expr ~ sub_else_if_expr* ~ sub_else_expr? }
-                sub_if_expr = { KEYWORD_if ~ DOT? ~ expression ~ block }
-                sub_else_if_expr = { KEYWORD_else_if ~ DOT? ~ expression ~ block }
-                sub_else_expr = { KEYWORD_else ~ block }
-            if_expr_derust = { KEYWORD_if ~ "{" ~ if_branch ~ else_if_branch* ~ else_branch? ~ MARK_branch? ~ "}" }
-                if_branch = { MARK_branch? ~ expression ~ block }
-                else_if_branch = { MARK_branch? ~ expression ~ block }
-                else_branch = { MARK_branch? ~ KEYWORD_else ~ block }
-            // TODO when表达式
-            /* if_expr_when = { expression ~ DOT ~ KEYWORD_when ~ DOT? ~ expression */
-            /*     ~ ( DOT ~ KEYWORD_else ~ ( expression | block ) )? }        */
-        // TODO: 语法糖: if something .is something {} else {}
-        //               let something = something .when something .is some .else {}
-        match_expr = { match_expr_derust }
-            match_expr_derust = { KEYWORD_if ~ DOT? ~ expression ~ DOT ~ KEYWORD_is ~ match_branches_expr }
-                match_branches_expr = { "{" ~ match_branch_expr+ ~ match_branch_else_expr? ~ MARK_branch? ~ "}" }
-                    // TODO: match 的参数, 是不是有限制.
-                match_branch_expr = { MARK_branch? ~ expression ~ block }
-                match_branch_else_expr = { MARK_branch? ~ ( KEYWORD_else | "_" ) ~ block }
-
-    loop_expr = { loop_for_expr | loop_while_expr | loop_times_expr | loop_repeat_expr }
-        loop_for_expr = { loop_mark? ~ KEYWORD_loop_for ~ DOT?
-            ~ ( identifier ~ DOT ) ~ KEYWORD_in ~ DOT? ~ expression ~ block }
-        loop_while_expr = { loop_mark? ~ KEYWORD_loop_while ~ DOT? ~ expression ~ block }
-        loop_times_expr = { loop_mark? ~ KEYWORD_loop ~ DOT?
-            ~ ( expression ) ~ DOT ~ KEYWORD_times ~ block }
-        loop_repeat_expr = { loop_mark? ~ KEYWORD_loop ~ block }
-            loop_mark = { KEYWORD_loop_mark ~ identifier ~ DOT }
 
     function_call_expr = {
           ( identifier

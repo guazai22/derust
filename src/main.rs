@@ -205,7 +205,7 @@ fn output(pair: Pair<Rule>) -> String {
             return s;
         },
         // 这里需要对 if_expr_derust 转变成 rust 语句进行变形.
-        | Rule::if_expr_rust | Rule::if_expr_derust => {
+        | Rule::rust_if_block | Rule::derust_if_block => {
             for subpair in pair.into_inner() {
                 s.push_str(&output(subpair));
             }
@@ -228,7 +228,7 @@ fn output(pair: Pair<Rule>) -> String {
             s.push_str(";");
             return s;
         },
-        | Rule::match_branches_expr => {
+        | Rule::match_branches => {
             s.push_str("{");
             for subpair in pair.into_inner() {
                 s.push_str(&output(subpair));
@@ -312,7 +312,7 @@ fn output(pair: Pair<Rule>) -> String {
             );
             return s;
         },
-        | Rule::loop_times_expr => {
+        | Rule::loop_times_block => {
             let mut inner_rules = pair.into_inner();
             let mut inner_rule = inner_rules.next().unwrap();
             let mut loop_mark = String::new();
@@ -335,7 +335,7 @@ fn output(pair: Pair<Rule>) -> String {
             }
             return s;
         },
-        | Rule::loop_for_expr => {
+        | Rule::loop_for_block => {
             let mut inner_rules = pair.into_inner();
             let inner_rule = inner_rules.next().unwrap();
             if inner_rule.as_rule() == Rule::loop_mark {
@@ -361,7 +361,7 @@ fn output(pair: Pair<Rule>) -> String {
             s = format!("'{}:", output(inner_rules.next().unwrap()));
             return s;
         },
-        | Rule::loop_repeat_expr => {
+        | Rule::loop_repeat_block => {
             let mut inner_rules = pair.into_inner();
             let inner_rule = inner_rules.next().unwrap();
             if inner_rule.as_rule() == Rule::loop_mark {
@@ -371,7 +371,7 @@ fn output(pair: Pair<Rule>) -> String {
             }
             return s;
         },
-        | Rule::loop_while_expr => {
+        | Rule::loop_while_block => {
             let mut inner_rules = pair.into_inner();
             let inner_rule = inner_rules.next().unwrap();
             if inner_rule.as_rule() == Rule::loop_mark {
@@ -390,7 +390,7 @@ fn output(pair: Pair<Rule>) -> String {
             }
             return s;
         },
-        | Rule::match_expr_derust => {
+        | Rule::match_block => {
             let mut inner_rules = pair.into_inner();
             s = format!(
                 "match {} {}",
@@ -399,7 +399,7 @@ fn output(pair: Pair<Rule>) -> String {
             );
             return s;
         },
-        | Rule::match_branch_expr => {
+        | Rule::match_branch => {
             let mut inner_rules = pair.into_inner();
             s = format!(
                 "{} => {}",
@@ -408,12 +408,12 @@ fn output(pair: Pair<Rule>) -> String {
             );
             return s;
         },
-        | Rule::match_branch_else_expr => {
+        | Rule::match_else_branch => {
             let mut inner_rules = pair.into_inner();
             s = format!("_ => {}", output(inner_rules.next().unwrap()));
             return s;
         },
-        | Rule::sub_if_expr => {
+        | Rule::sub_if_block => {
             let mut inner_rules = pair.into_inner();
             s = format!(
                 "if {} {}",
@@ -422,7 +422,7 @@ fn output(pair: Pair<Rule>) -> String {
             );
             return s;
         },
-        | Rule::sub_else_if_expr => {
+        | Rule::sub_else_if_block => {
             let mut inner_rules = pair.into_inner();
             s = format!(
                 "else if {} {}",
@@ -431,7 +431,7 @@ fn output(pair: Pair<Rule>) -> String {
             );
             return s;
         },
-        | Rule::sub_else_expr => {
+        | Rule::sub_else_block => {
             let mut inner_rules = pair.into_inner();
             s = format!("else {}", output(inner_rules.next().unwrap()));
             return s;
@@ -472,14 +472,13 @@ fn output(pair: Pair<Rule>) -> String {
 
         // enmu类规则, 或者只有一条有效子规则的规则, 直接跳到 子规则
         | Rule::array_expr
-        | Rule::branch_expr
+        | Rule::branch_block
         | Rule::brackt_expr
         | Rule::expression
         | Rule::fn_def_identifier
-        | Rule::if_expr
+        | Rule::if_block
         | Rule::literal_expr
-        | Rule::loop_expr
-        | Rule::match_expr
+        | Rule::loop_block
         | Rule::module
         | Rule::statement
         | Rule::string_literal
