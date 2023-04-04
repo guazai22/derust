@@ -54,25 +54,31 @@ loop_block = { loop_for_block | loop_while_block | loop_times_block | loop_repea
     loop_while_block = { loop_mark? ~ KEYWORD_loop_while ~ DOT? ~ expression ~ block }
     loop_times_block = { loop_mark? ~ KEYWORD_loop ~ DOT? ~ expression ~ DOT ~ KEYWORD_times ~ block }
     loop_repeat_block = { loop_mark? ~ KEYWORD_loop ~ block }
-        loop_mark = { KEYWORD_loop_mark ~ identifier ~ DOT }
+        loop_mark = { KEYWORD_loop_mark ~ DOT? ~ identifier ~ DOT }
 
-statement = { function_call_statement
+statement = {
+      function_call_statement
+    | dot_chain_statement
     | let_statement
-    | return_statement
     | branch_block
     | loop_block
+    | continue_statement | break_statement | return_statement
     /* | if_statement */
     // TODO
 }
     function_call_statement = { function_call_expr ~ ";" }
-    // TODO: 赋值的时候, 前面的变量其实可以有多种形式的, 要加上这些变化.
+    // TODO: pattern?
     let_statement = { KEYWORD_let ~ DOT? ~ ( type_expr | identifier ) ~ assignment? ~ ";" }
         assignment = { "=" ~ expression }
-    return_statement = { KEYWORD_return ~ DOT? ~ expression ~ ";" }
+    return_statement = { KEYWORD_return ~ DOT? ~ expression? ~ ";" }
+    break_statement = { loop_mark? ~ KEYWORD_break ~ DOT? ~ expression? ~ ";" }
+    continue_statement = { loop_mark? ~ KEYWORD_continue ~ ";" }
+    dot_chain_statement = { dot_chain_expr ~ ";" }
 
-expression = {
+expression = { dot_chain_expr | expression_except_chain }
+expression_except_chain = {
       brackt_expr       | tuple_expr        | array_expr
-    /* | if_block          | loop_block */
+    | if_block          | loop_block
     | lambda_expr
     | function_call_expr
     | literal_expr      | identifier
@@ -106,6 +112,7 @@ expression = {
 }
     brackt_expr = { "(" ~ expression ~ ")" }
     tuple_expr  = { "(" ~ ","? ~ expression ~ ("," ~ expression)+ ~ ","? ~")" }
+    dot_chain_expr = { expression_except_chain ~ "." ~ expression }
 
     function_call_expr = {
           ( identifier
@@ -152,8 +159,7 @@ comment = _{ block_comment | line_comment }
     line_comment = _{ ("//" ~ !("/" | "!") ~ (!NEWLINE ~ ANY)*) }
     block_comment = _{ "/*" ~ (block_comment | !"*/" ~ ANY)* ~ "*/" }
 
-identifier = ${ !( KEYWORD | ("_"* ~ NUMBER) ) ~ identifier_atomic ~ ( " " ~ identifier_atomic )*
-    | "(" ~ identifier ~ ")" }
+identifier = ${ !( KEYWORD | ("_"* ~ NUMBER) ) ~ identifier_atomic ~ ( " " ~ identifier_atomic )* }
 // TODO: 这个 rule 运行的时候并不如设想的那样是 silent, 可能有bug
 // 添加unicode字符
     identifier_atomic = ${ ( "_"* ~ (LETTER | NUMBER)+ ~ "_"* )+ }
@@ -170,13 +176,15 @@ KEYWORD = @{
 }
 
 KEYWORD_def_fn_start =      _{ "fn" }
+KEYWORD_break =             _{ "break" }
+KEYWORD_continue =          _{ "continue" }
 KEYWORD_else_if =           _{ "else" ~ "if" }
 KEYWORD_else =              _{ "else"}
 KEYWORD_if =                _{ "if" }
 KEYWORD_is =                _{ "is" }
 KEYWORD_in =                _{ "in" }
 KEYWORD_lambda_start =      _{ "fn" }
-KEYWORD_let =               _{ "let" ~ "mut"? }
+KEYWORD_let =                { "let" ~ "mut"? }
 KEYWORD_loop =              _{ "loop" }
 KEYWORD_loop_for =          _{ "loop"? ~ "for" }
 KEYWORD_loop_mark =         _{ "mark" }

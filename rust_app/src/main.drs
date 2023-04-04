@@ -1,0 +1,7 @@
+fn main () {
+    let number a3 = 3;
+    let str 你 = "你好abc";
+    let mut s = str 你.to string();
+    s.push str(" 123");
+    println("pr: {}", s);
+}
